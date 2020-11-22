@@ -1,0 +1,3 @@
+numpy~=1.18.0
+scipy~=1.5.0
+opencv-python~=4.2.0
