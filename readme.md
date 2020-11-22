@@ -2,6 +2,8 @@
 
 ![logo](./docs/imgs/logo.png)
 
+[中文介绍](./docs/readme_zh.md)
+
 ## Introduction
 
 A simple and efficient implementation of SOD metrcis
