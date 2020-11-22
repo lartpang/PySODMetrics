@@ -25,6 +25,18 @@ matlab: Smeasure:0.959; wFmeasure:0.438; MAE:0.018; adpEm:0.946; meanEm:0.975; m
 **注意** 此处基于的matlab代码需要将<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102>
 的`Bi_sal(sal>threshold)=1;`改为` Bi_sal(sal>=threshold)=1;`，相关讨论见：<https://github.com/DengPingFan/CODToolbox/issues/1>
 
+## 使用
+
+### 依赖
+
+```shell
+pip install -r requirements.txt
+```
+
+### 示例
+
+* <./tests/test_metrics.py>
+
 ## 感谢
 
 * <https://github.com/DengPingFan/CODToolbox> 
