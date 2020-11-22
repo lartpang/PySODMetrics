@@ -1,24 +1,28 @@
 # Introduction
 
 A simple and efficient implementation of SOD metrcis
-一份简单有效的SOD指标实现
 
 - Based on `numpy` and `scipy`
 - Verification based on Fan's matlab code <https://github.com/DengPingFan/CODToolbox>
 - The code structure is simple and easy to extend
 - The code is lightweight and fast
+
+Your improvements and suggestions are welcome.
+
+---
+
+一份简单有效的SOD指标实现
+
 - 基于`numpy`和极少量`scipy.ndimage`代码
 - 基于DengPing Fan <https://github.com/DengPingFan/CODToolbox>
 - 结构简单，易于扩展
 - 代码轻量且快速
 
-Your improvements and suggestions are welcome.
 欢迎您的改进和建议。
 
 ## Compared with Matlab Code from Fan <https://github.com/DengPingFan/CODToolbox>
 
 In our comparison (the test code can be seen under the `test` folder), the result is consistent with Fan's code, as follows:
-在我们的测试中 (测试代码可见`test`文件夹下内容)，结果与Fan的代码一致，如下:
 
 ```text
 ours:   Smeasure 0.959  wFmeasure 0.438  MAE 0.018  adpEm 0.946  meanEm 0.975  maxEm 0.987  adpFm 0.456  meanFm 0.454  maxFm 0.461
@@ -27,10 +31,18 @@ matlab: Smeasure:0.959; wFmeasure:0.438; MAE:0.018; adpEm:0.946; meanEm:0.975; m
 
 **NOTE** The matlab code based here <<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102> 
 needs to change `Bi_sal(sal>threshold)=1;` to `Bi_sal(sal>=threshold)=1;`. For related discussion, please see: <https://github.com/DengPingFan/CODToolbox /issues/1>
+
+---
+
+在我们的测试中 (测试代码可见`test`文件夹下内容)，结果与Fan的代码一致，如下:
+
+```text
+ours:   Smeasure 0.959  wFmeasure 0.438  MAE 0.018  adpEm 0.946  meanEm 0.975  maxEm 0.987  adpFm 0.456  meanFm 0.454  maxFm 0.461
+matlab: Smeasure:0.959; wFmeasure:0.438; MAE:0.018; adpEm:0.946; meanEm:0.975; maxEm:0.987; adpFm:0.456; meanFm:0.454; maxFm:0.461.
+```
+
 **注意** 此处基于的matlab代码需要将<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102>
 的`Bi_sal(sal>threshold)=1;`改为` Bi_sal(sal>=threshold)=1;`，相关讨论见：<https://github.com/DengPingFan/CODToolbox/issues/1>
-
-欢迎您指出问题。
 
 ## Thanks
 
