@@ -15,6 +15,10 @@ A simple and efficient implementation of SOD metrcis
 
 Your improvements and suggestions are welcome.
 
+## TODO List
+
+* [ ] Add the necessary documentation for different functions.
+
 ## Compared with Matlab Code from Fan <https://github.com/DengPingFan/CODToolbox>
 
 In our comparison (the test code can be seen under the `test` folder), the result is consistent with Fan's code, as follows:
