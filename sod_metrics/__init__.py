@@ -166,7 +166,7 @@ class Smeasure(object):
         x, y = self.centroid(gt)
         part_info = self.divide_with_xy(pred, gt, x, y)
         w1, w2, w3, w4 = part_info['weight']
-        assert w1 + w2 + w3 + w4 == 1
+        # assert np.isclose(w1 + w2 + w3 + w4, 1), (w1 + w2 + w3 + w4, pred.mean(), gt.mean())
 
         pred1, pred2, pred3, pred4 = part_info['pred']
         gt1, gt2, gt3, gt4 = part_info['gt']
@@ -211,7 +211,8 @@ class Smeasure(object):
         w1 = x * y / area
         w2 = y * (w - x) / area
         w3 = (h - y) * x / area
-        w4 = (h - y) * (w - x) / area
+        # w4 = (h - y) * (w - x) / area
+        w4 = 1 - w1 - w2 - w3
 
         return dict(gt=(gt_LT, gt_RT, gt_LB, gt_RB),
                     pred=(pred_LT, pred_RT, pred_LB, pred_RB),
