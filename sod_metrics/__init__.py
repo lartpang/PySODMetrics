@@ -11,6 +11,7 @@ class Fmeasure(object):
         self.precisions = []
         self.recalls = []
         self.adaptive_fms = []
+        self.changeable_fms = []
 
     def step(self, pred, gt):
         """
@@ -22,9 +23,10 @@ class Fmeasure(object):
         adaptive_fm = self.cal_adaptive_fm(pred=pred, gt=gt)
         self.adaptive_fms.append(adaptive_fm)
 
-        precisions, recalls = self.cal_pr(pred=pred, gt=gt)
+        precisions, recalls, changeable_fms = self.cal_pr(pred=pred, gt=gt)
         self.precisions.append(precisions)
         self.recalls.append(recalls)
+        self.changeable_fms.append(changeable_fms)
 
     def prepare_data(self, pred, gt):
         gt = gt > 128
@@ -34,7 +36,7 @@ class Fmeasure(object):
     def cal_adaptive_fm(self, pred, gt):
         adaptive_threshold = min(2 * pred.mean(), 255)
         binary_predcition = pred >= adaptive_threshold
-        area_intersection = np.sum(binary_predcition * gt)
+        area_intersection = binary_predcition[gt].sum()
         if area_intersection == 0:
             adaptive_fm = 0
         else:
@@ -45,17 +47,15 @@ class Fmeasure(object):
 
     def cal_pr(self, pred, gt):
         # 1. 获取预测结果在真值前背景区域中的直方图
-        fg_hist, _ = np.histogram(pred[gt == 1], bins=range(257))  # 最后一个bin为[255, 256]
-        bg_hist, _ = np.histogram(pred[gt == 0], bins=range(257))
+        fg_hist, _ = np.histogram(pred[gt], bins=np.linspace(0, 256, 257))  # 最后一个bin为[255, 256]
+        bg_hist, _ = np.histogram(pred[~gt], bins=np.linspace(0, 256, 257))
         # 2. 使用累积直方图（Cumulative Histogram）获得对应真值前背景中大于不同阈值的像素数量
-        # 这里使用累加（cumsum）就是为了一次性得出 >=不同阈值 的像素数量,
-        # yinwei zhebufen shi jisuan huiyongdao de qianjingqvyu
+        # 这里使用累加（cumsum）就是为了一次性得出 >=不同阈值 的像素数量, 这里仅计算了前景区域
         fg_w_thrs = np.cumsum(np.flip(fg_hist), axis=0)
         bg_w_thrs = np.cumsum(np.flip(bg_hist), axis=0)
         # 3. 使用不同阈值的结果计算对应的precision和recall
         # p和r的计算的真值是pred==1&gt==1，二者仅有分母不同，分母前者是pred==1，后者是gt==1
-        # weile tongshi jisuan butong yuzhi de jieguo, zheli shiyong hsitogram&flop&cumsum
-        # huodele butongyuzhixia de qianjing xiangsushuliang
+        # 为了同时计算不同阈值的结果，这里使用hsitogram&flip&cumsum 获得了不同各自的前景像素数量
         TPs = fg_w_thrs.copy()
         Ps = (fg_w_thrs + bg_w_thrs).copy()
         T = np.sum(gt)
@@ -69,19 +69,18 @@ class Fmeasure(object):
         # Ps[i] = 0 -> fg_w_thrs[i] = 0, bg_w_thrs[i] = 0
         precisions = TPs / Ps
         recalls = TPs / T
-        return precisions, recalls
+
+        numerator = (1 + self.beta) * precisions * recalls
+        denominator = np.where(numerator == 0, 1, self.beta * precisions + recalls)
+        changeable_fms = numerator / denominator
+        return precisions, recalls, changeable_fms
 
     def get_results(self):
         adaptive_fm = np.mean(np.array(self.adaptive_fms, np.float32))
-
-        precision = np.mean(np.array(self.precisions, dtype=np.float32), axis=0)
-        recall = np.mean(np.array(self.recalls, dtype=np.float32), axis=0)
-
-        numerator = (1 + self.beta) * precision * recall
-        denominator = np.where(numerator == 0, 1, self.beta * precision + recall)
-        changable_fm = numerator / denominator
-
-        return dict(fm=dict(adp=adaptive_fm, curve=changable_fm),
+        changeable_fm = np.mean(np.array(self.changeable_fms, dtype=np.float32), axis=0)
+        precision = np.mean(np.array(self.precisions, dtype=np.float32), axis=0)  # N, 256
+        recall = np.mean(np.array(self.recalls, dtype=np.float32), axis=0)  # N, 256
+        return dict(fm=dict(adp=adaptive_fm, curve=changeable_fm),
                     pr=dict(p=precision, r=recall))
 
 
@@ -247,27 +246,31 @@ class Smeasure(object):
 
 class Emeasure(object):
     # Enhanced-alignment Measure for Binary Foreground Map Evaluation (IJCAI 2018)
-    def __init__(self):
+    def __init__(self, only_adaptive_em=False):
+        """
+        Args:
+            only_adaptive_em: 由于计算changeable耗时较长，为了用于模型的快速验证，可以选择不计算，仅保留adaptive_em
+        """
         self.adaptive_ems = []
-        self.changeble_ems = []
+        self.changeable_ems = None if only_adaptive_em else []
 
-    def step(self, pred, gt):
+    def step(self, pred, gt, ):
         pred, gt = self.prepare_data(pred=pred, gt=gt)
         self.set_shared_attr(pred=pred, gt=gt)
-        changable_ems = self.cal_changable_em_light(pred, gt)
+        if self.changeable_ems is not None:
+            changeable_ems = self.cal_changeable_em_light(pred, gt)
+            self.changeable_ems.append(changeable_ems)
         adaptive_em = self.cal_adaptive_em(pred, gt)
-        self.changeble_ems.append(changable_ems)
         self.adaptive_ems.append(adaptive_em)
 
     def prepare_data(self, pred, gt):
         gt = gt > 128
-        gt = gt.astype(np.float32)
         pred = pred.astype(np.float32)
         return pred, gt
 
     def set_shared_attr(self, pred, gt):
-        self.all_fg = np.all(gt == 1)
-        self.all_bg = np.all(gt == 0)
+        self.all_fg = np.all(gt)
+        self.all_bg = np.all(~gt)
         self.gt_size = gt.shape[0] * gt.shape[1]
 
     def cal_adaptive_em(self, pred, gt):
@@ -283,8 +286,8 @@ class Emeasure(object):
         score = np.sum(enhanced_matrix) / (self.gt_size - 1 + _EPS)
         return score
 
-    def cal_changable_em_light(self, pred, gt):
-        changable_ems = []
+    def cal_changeable_em_light(self, pred, gt):
+        changeable_ems = []
         for th in range(256):
             binarized_pred = pred >= th
 
@@ -294,9 +297,9 @@ class Emeasure(object):
                 enhanced_matrix = binarized_pred
             else:
                 enhanced_matrix = self.cal_enhanced_matrix(binarized_pred, gt)
-            changable_em = enhanced_matrix.sum() / (self.gt_size - 1 + _EPS)
-            changable_ems.append(changable_em)
-        return changable_ems
+            changeable_em = enhanced_matrix.sum() / (self.gt_size - 1 + _EPS)
+            changeable_ems.append(changeable_em)
+        return changeable_ems
 
     def cal_enhanced_matrix(self, dFM, dGT):
         """
@@ -309,7 +312,7 @@ class Emeasure(object):
         enhanced = np.power(align_Matrix + 1, 2) / 4
         return enhanced
 
-    # def cal_changable_em_fast(self, pred, gt):
+    # def cal_changeable_em_fast(self, pred, gt):
     #     """
     #     会占用太大的内存，light是更合适的选择
     #     """
@@ -324,9 +327,9 @@ class Emeasure(object):
     #     else:
     #         enhanced_matrix = self.cal_enhanced_matrix_parallel(binarized_preds, gt)
     #     # N, H, W
-    #     changable_ems = enhanced_matrix.sum(axis=(1, 2)) / (self.gt_size - 1 + _EPS)
+    #     changeable_ems = enhanced_matrix.sum(axis=(1, 2)) / (self.gt_size - 1 + _EPS)
     #     # N
-    #     return changable_ems
+    #     return changeable_ems
     #
     # def cal_enhanced_matrix_parallel(self, dFM, dGT):
     #     """
@@ -341,8 +344,11 @@ class Emeasure(object):
 
     def get_results(self):
         adaptive_em = np.mean(np.array(self.adaptive_ems, dtype=np.float32))
-        changable_em = np.mean(np.array(self.changeble_ems, dtype=np.float32), axis=0)
-        return dict(em=dict(adp=adaptive_em, curve=changable_em))
+        if self.changeable_ems is not None:
+            changeable_em = np.mean(np.array(self.changeable_ems, dtype=np.float32), axis=0)
+        else:
+            changeable_em = None
+        return dict(em=dict(adp=adaptive_em, curve=changeable_em))
 
 
 class WeightedFmeasure(object):
@@ -357,7 +363,7 @@ class WeightedFmeasure(object):
     def step(self, pred, gt):
         pred, gt = self.prepare_data(pred=pred, gt=gt)
 
-        if gt.max() == 0:
+        if np.all(~gt):
             score = 0
         else:
             score = self.cal_wfm(pred, gt)

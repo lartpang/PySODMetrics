@@ -4,9 +4,10 @@
 # @GitHub  : https://github.com/lartpang
 
 import os
+import sys
 
 import cv2
-import sys
+
 sys.path.append('../')
 
 import sod_metrics as M
