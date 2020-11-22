@@ -254,7 +254,7 @@ class Emeasure(object):
     def step(self, pred, gt):
         pred, gt = self.prepare_data(pred=pred, gt=gt)
         self.set_shared_attr(pred=pred, gt=gt)
-        changable_ems = self.cal_changable_em(pred, gt)
+        changable_ems = self.cal_changable_em_light(pred, gt)
         adaptive_em = self.cal_adaptive_em(pred, gt)
         self.changeble_ems.append(changable_ems)
         self.adaptive_ems.append(adaptive_em)
@@ -270,47 +270,6 @@ class Emeasure(object):
         self.all_bg = np.all(gt == 0)
         self.gt_size = gt.shape[0] * gt.shape[1]
 
-    # def cal_changable_em(self, pred, gt):
-    #     changable_ems = []
-    #     for th in range(256):
-    #         binarized_pred = np.where(pred > th, 1, 0)
-    #
-    #         if self.all_bg:
-    #             enhanced_matrix = 1 - binarized_pred
-    #         elif self.all_fg:
-    #             enhanced_matrix = binarized_pred
-    #         else:
-    #             enhanced_matrix = self.cal_enhanced_matrix(binarized_pred, gt)
-    #         changable_em = np.sum(enhanced_matrix) / (self.gt_size - 1 + self.eps)
-    #         changable_ems.append(changable_em)
-    #     return changable_ems
-    def cal_changable_em(self, pred, gt):
-        binarized_preds = np.empty(shape=(256, *(gt.shape)), dtype=np.bool)
-        for th in range(256):
-            binarized_preds[th] = pred >= th
-
-        if self.all_bg:
-            enhanced_matrix = 1 - binarized_preds
-        elif self.all_fg:
-            enhanced_matrix = binarized_preds
-        else:
-            enhanced_matrix = self.cal_enhanced_matrix_parallel(binarized_preds, gt)
-        # N, H, W
-        changable_ems = enhanced_matrix.sum(axis=(1, 2)) / (self.gt_size - 1 + _EPS)
-        # N
-        return changable_ems
-
-    def cal_enhanced_matrix_parallel(self, dFM, dGT):
-        """
-        dFM: (N, H, W)
-        dGT: (H, W)
-        """
-        align_FM = dFM - dFM.mean(axis=(1, 2), keepdims=True)
-        align_GT = dGT - dGT.mean()  # H, W
-        align_Matrix = 2.0 * (align_GT * align_FM) / (align_GT ** 2 + align_FM ** 2 + _EPS)
-        enhanced = np.power(align_Matrix + 1, 2) / 4
-        return enhanced
-
     def cal_adaptive_em(self, pred, gt):
         th = min(2 * pred.mean(), 255)
         binarized_pred = pred >= th
@@ -324,6 +283,21 @@ class Emeasure(object):
         score = np.sum(enhanced_matrix) / (self.gt_size - 1 + _EPS)
         return score
 
+    def cal_changable_em_light(self, pred, gt):
+        changable_ems = []
+        for th in range(256):
+            binarized_pred = pred >= th
+
+            if self.all_bg:
+                enhanced_matrix = 1 - binarized_pred
+            elif self.all_fg:
+                enhanced_matrix = binarized_pred
+            else:
+                enhanced_matrix = self.cal_enhanced_matrix(binarized_pred, gt)
+            changable_em = enhanced_matrix.sum() / (self.gt_size - 1 + _EPS)
+            changable_ems.append(changable_em)
+        return changable_ems
+
     def cal_enhanced_matrix(self, dFM, dGT):
         """
         dFM: H, W
@@ -334,6 +308,36 @@ class Emeasure(object):
         align_Matrix = 2.0 * (align_GT * align_FM) / (align_GT ** 2 + align_FM ** 2 + _EPS)
         enhanced = np.power(align_Matrix + 1, 2) / 4
         return enhanced
+
+    # def cal_changable_em_fast(self, pred, gt):
+    #     """
+    #     会占用太大的内存，light是更合适的选择
+    #     """
+    #     binarized_preds = np.empty(shape=(256, *(gt.shape)), dtype=np.bool)
+    #     for th in range(256):
+    #         binarized_preds[th] = pred >= th
+    #
+    #     if self.all_bg:
+    #         enhanced_matrix = 1 - binarized_preds
+    #     elif self.all_fg:
+    #         enhanced_matrix = binarized_preds
+    #     else:
+    #         enhanced_matrix = self.cal_enhanced_matrix_parallel(binarized_preds, gt)
+    #     # N, H, W
+    #     changable_ems = enhanced_matrix.sum(axis=(1, 2)) / (self.gt_size - 1 + _EPS)
+    #     # N
+    #     return changable_ems
+    #
+    # def cal_enhanced_matrix_parallel(self, dFM, dGT):
+    #     """
+    #     dFM: (N, H, W)
+    #     dGT: (H, W)
+    #     """
+    #     align_FM = dFM - dFM.mean(axis=(1, 2), keepdims=True)
+    #     align_GT = dGT - dGT.mean()  # H, W
+    #     align_Matrix = 2.0 * (align_GT * align_FM) / (align_GT ** 2 + align_FM ** 2 + _EPS)
+    #     enhanced = np.power(align_Matrix + 1, 2) / 4
+    #     return enhanced
 
     def get_results(self):
         adaptive_em = np.mean(np.array(self.adaptive_ems, dtype=np.float32))
