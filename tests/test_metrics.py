@@ -6,6 +6,8 @@
 import os
 
 import cv2
+import sys
+sys.path.append('../')
 
 import sod_metrics as M
 
