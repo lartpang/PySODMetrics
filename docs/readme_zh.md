@@ -18,8 +18,8 @@
 在我们的测试中 (测试代码可见`test`文件夹下内容)，结果与Fan的代码一致，如下:
 
 ```text
-ours:   Smeasure 0.959  wFmeasure 0.438  MAE 0.018  adpEm 0.946  meanEm 0.975  maxEm 0.987  adpFm 0.456  meanFm 0.454  maxFm 0.461
-matlab: Smeasure:0.959; wFmeasure:0.438; MAE:0.018; adpEm:0.946; meanEm:0.975; maxEm:0.987; adpFm:0.456; meanFm:0.454; maxFm:0.461.
+ours:   Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; maxEm:0.967; adpFm:0.582; meanFm:0.577; maxFm:0.589
+matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; maxEm:0.967; adpFm:0.582; meanFm:0.577; maxFm:0.589.
 ```
 
 **注意** 此处基于的matlab代码需要将<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102>

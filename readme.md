@@ -24,8 +24,8 @@ Your improvements and suggestions are welcome.
 In our comparison (the test code can be seen under the `test` folder), the result is consistent with Fan's code, as follows:
 
 ```text
-ours:   Smeasure 0.959  wFmeasure 0.438  MAE 0.018  adpEm 0.946  meanEm 0.975  maxEm 0.987  adpFm 0.456  meanFm 0.454  maxFm 0.461
-matlab: Smeasure:0.959; wFmeasure:0.438; MAE:0.018; adpEm:0.946; meanEm:0.975; maxEm:0.987; adpFm:0.456; meanFm:0.454; maxFm:0.461.
+ours:   Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; maxEm:0.967; adpFm:0.582; meanFm:0.577; maxFm:0.589
+matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; maxEm:0.967; adpFm:0.582; meanFm:0.577; maxFm:0.589.
 ```
 
 **NOTE** The matlab code based here <<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102> 
