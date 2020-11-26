@@ -105,7 +105,7 @@ class MAE(object):
         if pred.max() != pred.min():
             pred = (pred - pred.min()) / (pred.max() - pred.min())
         else:
-            pred /= 255
+            pred = pred / 255
         return pred, gt
 
     def cal_mae(self, pred, gt):
@@ -133,7 +133,7 @@ class Smeasure(object):
         if pred.max() != pred.min():
             pred = (pred - pred.min()) / (pred.max() - pred.min())
         else:
-            pred /= 255
+            pred = pred / 255
         return pred, gt
 
     def cal_sm(self, pred, gt):
@@ -374,7 +374,7 @@ class WeightedFmeasure(object):
         if pred.max() != pred.min():
             pred = (pred - pred.min()) / (pred.max() - pred.min())
         else:
-            pred /= 255
+            pred = pred / 255
         return pred, gt
 
     def cal_wfm(self, pred, gt):
