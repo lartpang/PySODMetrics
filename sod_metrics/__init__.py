@@ -20,7 +20,6 @@ def _get_adaptive_threshold(matrix: np.ndarray, max_value: float = 1) -> float:
 
 
 class Fmeasure(object):
-    # Fmeasure： Frequency-tuned salient region detection(CVPR 2009)
     def __init__(self, beta: float = 0.3):
         self.beta = beta
         self.precisions = []
@@ -44,23 +43,8 @@ class Fmeasure(object):
         self.changeable_fms.append(changeable_fms)
 
     def cal_adaptive_fm(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        """
-        快速统计numpy数组的非零值建议使用np.count_nonzero，一个简单的小实验
-        def cal_nonzero(size):
-        ...     a = np.random.randn(size, size)
-        ...     a = a > 0
-        ...     start = time.time()
-        ...     print(np.count_nonzero(a), time.time() - start)
-        ...     start = time.time()
-        ...     print(np.sum(a), time.time() - start)
-        ...     start = time.time()
-        ...     print(len(np.nonzero(a)[0]), time.time() - start)
-        ...
-        cal_nonzero(1000)
-        499792 6.67572021484375e-05
-        499792 0.0006699562072753906
-        499792 0.006061553955078125
-        """
+        # 快速统计numpy数组的非零值建议使用np.count_nonzero，
+        # 一个简单的小实验可见tests/test_speed_for_count_nonzero.py
         adaptive_threshold = _get_adaptive_threshold(pred, max_value=1)
         binary_predcition = pred >= adaptive_threshold
         area_intersection = binary_predcition[gt].sum()
@@ -84,13 +68,11 @@ class Fmeasure(object):
         # 3. 使用不同阈值的结果计算对应的precision和recall
         # p和r的计算的真值是pred==1&gt==1，二者仅有分母不同，分母前者是pred==1，后者是gt==1
         # 为了同时计算不同阈值的结果，这里使用hsitogram&flip&cumsum 获得了不同各自的前景像素数量
-        TPs = fg_w_thrs.copy()
-        Ps = (fg_w_thrs + bg_w_thrs).copy()
-        T = np.count_nonzero(gt)
+        TPs = fg_w_thrs
+        Ps = fg_w_thrs + bg_w_thrs
         # 为防止除0，这里针对除0的情况分析后直接对于0分母设为1，因为此时分子必为0
         Ps[Ps == 0] = 1
-        if T == 0:
-            T = 1
+        T = max(np.count_nonzero(gt), 1)
         # TODO: T=0 或者 特定阈值下fg_w_thrs=0或者bg_w_thrs=0，这些都会包含在TPs[i]=0的情况中，
         #  但是这里使用TPs不便于处理列表
         # T=0 -> fg_w_thrs=[0, ..., 0] -> TPs=[0, ..., 0] 解决办法：T重新赋值为1
@@ -113,23 +95,18 @@ class Fmeasure(object):
 
 
 class MAE(object):
-    # mean absolute error
     def __init__(self):
         self.maes = []
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
-        """
-        gt is {0, 255} map and will be binarized by the threshold of 128
-        pred is [0, 255] np.uint8
-        """
         pred, gt = _prepare_data(pred, gt)
 
         mae = self.cal_mae(pred, gt)
         self.maes.append(mae)
 
     def cal_mae(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        score = np.mean(np.abs(pred - gt))
-        return score
+        mae = np.mean(np.abs(pred - gt))
+        return mae
 
     def get_results(self) -> dict:
         mae = np.mean(np.array(self.maes, np.float64))
@@ -137,7 +114,6 @@ class MAE(object):
 
 
 class Smeasure(object):
-    # Structure-measure: A new way to evaluate foreground maps (ICCV 2017)
     def __init__(self, alpha: float = 0.5):
         self.sms = []
         self.alpha = alpha
@@ -151,14 +127,13 @@ class Smeasure(object):
     def cal_sm(self, pred: np.ndarray, gt: np.ndarray) -> float:
         y = np.mean(gt)
         if y == 0:
-            score = 1 - np.mean(pred)
+            sm = 1 - np.mean(pred)
         elif y == 1:
-            score = np.mean(pred)
+            sm = np.mean(pred)
         else:
-            score = self.alpha * self.object(pred, gt) + \
-                    (1 - self.alpha) * self.region(pred, gt)
-            score = max(0, score)
-        return score
+            sm = self.alpha * self.object(pred, gt) + (1 - self.alpha) * self.region(pred, gt)
+            sm = max(0, sm)
+        return sm
 
     def object(self, pred: np.ndarray, gt: np.ndarray) -> float:
         fg = pred * gt
@@ -257,7 +232,6 @@ class Smeasure(object):
 
 
 class Emeasure(object):
-    # Enhanced-alignment Measure for Binary Foreground Map Evaluation (IJCAI 2018)
     def __init__(self, only_adaptive_em: bool = False):
         """
         Args:
@@ -268,6 +242,9 @@ class Emeasure(object):
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
         pred, gt = _prepare_data(pred=pred, gt=gt)
+        self.all_fg = np.all(gt)
+        self.all_bg = np.all(~gt)
+        self.gt_size = gt.shape[0] * gt.shape[1]
         if self.changeable_ems is not None:
             changeable_ems = self.cal_changeable_em_light(pred, gt)
             self.changeable_ems.append(changeable_ems)
@@ -276,8 +253,8 @@ class Emeasure(object):
 
     def cal_adaptive_em(self, pred: np.ndarray, gt: np.ndarray) -> float:
         adaptive_threshold = _get_adaptive_threshold(pred, max_value=1)
-        score = self.cal_em_with_threshold(pred, gt, threshold=adaptive_threshold)
-        return score
+        adaptive_em = self.cal_em_with_threshold(pred, gt, threshold=adaptive_threshold)
+        return adaptive_em
 
     def cal_changeable_em_light(self, pred: np.ndarray, gt: np.ndarray) -> list:
         changeable_ems = [
@@ -288,51 +265,21 @@ class Emeasure(object):
 
     def cal_em_with_threshold(self, pred: np.ndarray, gt: np.ndarray, threshold: float) -> float:
         binarized_pred = pred >= threshold
-        if np.all(~gt):
+        if self.all_bg:
             enhanced_matrix = 1 - binarized_pred
-        elif np.all(gt):
+        elif self.all_fg:
             enhanced_matrix = binarized_pred
         else:
             enhanced_matrix = self.cal_enhanced_matrix(binarized_pred, gt)
         score = enhanced_matrix.sum() / (gt.shape[0] * gt.shape[1] - 1 + _EPS)
         return score
 
-    def cal_enhanced_matrix(self, dFM: np.ndarray, dGT: np.ndarray) -> np.ndarray:
-        align_FM = dFM - dFM.mean()
-        align_GT = dGT - dGT.mean()
-        align_Matrix = 2.0 * (align_GT * align_FM) / (align_GT ** 2 + align_FM ** 2 + _EPS)
-        enhanced = np.power(align_Matrix + 1, 2) / 4
-        return enhanced
-
-    # def cal_changeable_em_fast(self, pred:np.ndarray, gt:np.ndarray):
-    #     """
-    #     会占用太大的内存，light是更合适的选择
-    #     """
-    #     binarized_preds = np.empty(shape=(256, *(gt.shape)), dtype=np.bool)
-    #     for th in range(256):
-    #         binarized_preds[th] = pred >= th
-    #
-    #     if self.all_bg:
-    #         enhanced_matrix = 1 - binarized_preds
-    #     elif self.all_fg:
-    #         enhanced_matrix = binarized_preds
-    #     else:
-    #         enhanced_matrix = self.cal_enhanced_matrix_parallel(binarized_preds, gt)
-    #     # N, H, W
-    #     changeable_ems = enhanced_matrix.sum(axis=(1, 2)) / (self.gt_size - 1 + _EPS)
-    #     # N
-    #     return changeable_ems
-    #
-    # def cal_enhanced_matrix_parallel(self, dFM, dGT):
-    #     """
-    #     dFM: (N, H, W)
-    #     dGT: (H, W)
-    #     """
-    #     align_FM = dFM - dFM.mean(axis=(1, 2), keepdims=True)
-    #     align_GT = dGT - dGT.mean()  # H, W
-    #     align_Matrix = 2.0 * (align_GT * align_FM) / (align_GT ** 2 + align_FM ** 2 + _EPS)
-    #     enhanced = np.power(align_Matrix + 1, 2) / 4
-    #     return enhanced
+    def cal_enhanced_matrix(self, pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
+        demeaned_pred = pred - pred.mean()
+        demeaned_gt = gt - gt.mean()
+        align_matrix = 2 * (demeaned_gt * demeaned_pred) / (demeaned_gt ** 2 + demeaned_pred ** 2 + _EPS)
+        enhanced_matrix = (align_matrix + 1) ** 2 / 4
+        return enhanced_matrix
 
     def get_results(self) -> dict:
         adaptive_em = np.mean(np.array(self.adaptive_ems, dtype=np.float64))
@@ -344,10 +291,6 @@ class Emeasure(object):
 
 
 class WeightedFmeasure(object):
-    """
-    created by lartpang (Youwei Pang)
-    """
-
     def __init__(self, beta: float = 1.0):
         self.beta = beta
         self.weighted_fms = []
