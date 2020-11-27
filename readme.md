@@ -28,8 +28,12 @@ ours:   Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; m
 matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; maxEm:0.967; adpFm:0.582; meanFm:0.577; maxFm:0.589.
 ```
 
-**NOTE** The matlab code based here <<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102> 
-needs to change `Bi_sal(sal>threshold)=1;` to `Bi_sal(sal>=threshold)=1;`. For related discussion, please see: <https://github.com/DengPingFan/CODToolbox/issues/1>
+**NOTE** 
+
+The matlab code based here <https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102> 
+needs to change `Bi_sal(sal>threshold)=1;` to `Bi_sal(sal>=threshold)=1;`. 
+
+For related discussion, please see: <https://github.com/DengPingFan/CODToolbox/issues/1>
 
 ## Usage
 

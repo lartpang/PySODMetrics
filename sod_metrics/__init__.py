@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.ndimage import convolve, distance_transform_edt as bwdist
 
+__version__ = '1.0.0'
+
 _EPS = 1e-16
 
 
@@ -241,7 +243,7 @@ class Emeasure(object):
         self.all_bg = np.all(~gt)
         self.gt_size = gt.shape[0] * gt.shape[1]
         if self.changeable_ems is not None:
-            changeable_ems = self.cal_changeable_em_light(pred, gt)
+            changeable_ems = self.cal_changeable_em(pred, gt)
             self.changeable_ems.append(changeable_ems)
         adaptive_em = self.cal_adaptive_em(pred, gt)
         self.adaptive_ems.append(adaptive_em)
@@ -251,7 +253,7 @@ class Emeasure(object):
         adaptive_em = self.cal_em_with_threshold(pred, gt, threshold=adaptive_threshold)
         return adaptive_em
 
-    def cal_changeable_em_light(self, pred: np.ndarray, gt: np.ndarray) -> list:
+    def cal_changeable_em(self, pred: np.ndarray, gt: np.ndarray) -> list:
         changeable_ems = [
             self.cal_em_with_threshold(pred, gt, threshold=th)
             for th in np.linspace(0, 1, 256)
@@ -286,7 +288,7 @@ class Emeasure(object):
 
 
 class WeightedFmeasure(object):
-    def __init__(self, beta: float = 1.0):
+    def __init__(self, beta: float = 1):
         self.beta = beta
         self.weighted_fms = []
 
@@ -347,9 +349,9 @@ class WeightedFmeasure(object):
         2D gaussian mask - should give the same result as MATLAB's
         fspecial('gaussian',[shape],[sigma])
         """
-        m, n = [(ss - 1.0) / 2.0 for ss in shape]
+        m, n = [(ss - 1) / 2 for ss in shape]
         y, x = np.ogrid[-m: m + 1, -n: n + 1]
-        h = np.exp(-(x * x + y * y) / (2.0 * sigma * sigma))
+        h = np.exp(-(x * x + y * y) / (2 * sigma * sigma))
         h[h < np.finfo(h.dtype).eps * h.max()] = 0
         sumh = h.sum()
         if sumh != 0:
