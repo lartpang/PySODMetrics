@@ -27,6 +27,15 @@ matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; m
 
 ## 使用
 
+### 下载文件为自己的脚本
+
+```shell script
+wget -nc -O metrics.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/sod_metrics/__init__.py
+```
+
+`-nc`: 如果文件存在，就不会下载
+
+
 ### 依赖
 
 ```shell

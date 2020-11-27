@@ -33,6 +33,14 @@ needs to change `Bi_sal(sal>threshold)=1;` to `Bi_sal(sal>=threshold)=1;`. For r
 
 ## Usage
 
+### Download the file as your script
+
+```shell script
+wget -nc -O metrics.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/sod_metrics/__init__.py
+```
+
+`-nc`: If the file 'metrics.py' already exists, it cannot be retrieved.
+
 ### Requirements
 
 ```shell
