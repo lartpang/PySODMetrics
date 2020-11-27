@@ -28,10 +28,6 @@ class Fmeasure(object):
         self.changeable_fms = []
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
-        """
-        gt is {0, 255} map and will be binarized by the threshold of 128
-        pred is [0, 255] np.uint8
-        """
         pred, gt = _prepare_data(pred, gt)
 
         adaptive_fm = self.cal_adaptive_fm(pred=pred, gt=gt)
@@ -234,8 +230,7 @@ class Smeasure(object):
 class Emeasure(object):
     def __init__(self, only_adaptive_em: bool = False):
         """
-        Args:
-            only_adaptive_em: 由于计算changeable耗时较长，为了用于模型的快速验证，可以选择不计算，仅保留adaptive_em
+        only_adaptive_em: 由于计算changeable耗时较长，为了用于模型的快速验证，可以选择不计算，仅保留adaptive_em
         """
         self.adaptive_ems = []
         self.changeable_ems = None if only_adaptive_em else []
@@ -271,8 +266,8 @@ class Emeasure(object):
             enhanced_matrix = binarized_pred
         else:
             enhanced_matrix = self.cal_enhanced_matrix(binarized_pred, gt)
-        score = enhanced_matrix.sum() / (gt.shape[0] * gt.shape[1] - 1 + _EPS)
-        return score
+        em = enhanced_matrix.sum() / (gt.shape[0] * gt.shape[1] - 1 + _EPS)
+        return em
 
     def cal_enhanced_matrix(self, pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
         demeaned_pred = pred - pred.mean()
