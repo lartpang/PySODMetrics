@@ -1,19 +1,17 @@
 import numpy as np
 from scipy.ndimage import convolve, distance_transform_edt as bwdist
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 _EPS = 1e-16
 
 
 def _prepare_data(pred: np.ndarray, gt: np.ndarray) -> tuple:
     gt = gt > 128
-    pred = pred.astype(np.float64)
+    # im2double, mapminmax
+    pred = pred / 255
     if pred.max() != pred.min():
         pred = (pred - pred.min()) / (pred.max() - pred.min())
-    else:
-        if pred.max() > 1:
-            pred = pred / 255
     return pred, gt
 
 
@@ -56,7 +54,8 @@ class Fmeasure(object):
 
     def cal_pr(self, pred: np.ndarray, gt: np.ndarray) -> tuple:
         # 1. 获取预测结果在真值前背景区域中的直方图
-        bins = np.linspace(0, 256, 257) / 256
+        pred = (pred * 255).astype(np.uint8)
+        bins = np.linspace(0, 256, 257)
         fg_hist, _ = np.histogram(pred[gt], bins=bins)  # 最后一个bin为[255, 256]
         bg_hist, _ = np.histogram(pred[~gt], bins=bins)
         # 2. 使用累积直方图（Cumulative Histogram）获得对应真值前背景中大于不同阈值的像素数量
