@@ -1,8 +1,8 @@
 # PySODMetrics
 
-![logo](./docs/imgs/logo.png)
+![logo](images/logo.png)
 
-[中文介绍](./docs/readme_zh.md)
+[中文介绍](readme_zh.md)
 
 ## Introduction
 

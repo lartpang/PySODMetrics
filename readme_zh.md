@@ -1,6 +1,6 @@
 # PySODMetrics
 
-![logo](./imgs/logo.png)
+![logo](images/logo.png)
 
 ## 介绍
 
