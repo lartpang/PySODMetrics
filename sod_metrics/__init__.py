@@ -1,9 +1,10 @@
 import numpy as np
 from scipy.ndimage import convolve, distance_transform_edt as bwdist
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 _EPS = 1e-16
+_TYPE = np.float64
 
 
 def _prepare_data(pred: np.ndarray, gt: np.ndarray) -> tuple:
@@ -83,10 +84,10 @@ class Fmeasure(object):
         return precisions, recalls, changeable_fms
 
     def get_results(self) -> dict:
-        adaptive_fm = np.mean(np.array(self.adaptive_fms, np.float64))
-        changeable_fm = np.mean(np.array(self.changeable_fms, dtype=np.float64), axis=0)
-        precision = np.mean(np.array(self.precisions, dtype=np.float64), axis=0)  # N, 256
-        recall = np.mean(np.array(self.recalls, dtype=np.float64), axis=0)  # N, 256
+        adaptive_fm = np.mean(np.array(self.adaptive_fms, _TYPE))
+        changeable_fm = np.mean(np.array(self.changeable_fms, dtype=_TYPE), axis=0)
+        precision = np.mean(np.array(self.precisions, dtype=_TYPE), axis=0)  # N, 256
+        recall = np.mean(np.array(self.recalls, dtype=_TYPE), axis=0)  # N, 256
         return dict(fm=dict(adp=adaptive_fm, curve=changeable_fm),
                     pr=dict(p=precision, r=recall))
 
@@ -106,7 +107,7 @@ class MAE(object):
         return mae
 
     def get_results(self) -> dict:
-        mae = np.mean(np.array(self.maes, np.float64))
+        mae = np.mean(np.array(self.maes, _TYPE))
         return dict(mae=mae)
 
 
@@ -224,26 +225,22 @@ class Smeasure(object):
         return score
 
     def get_results(self) -> dict:
-        sm = np.mean(np.array(self.sms, dtype=np.float64))
+        sm = np.mean(np.array(self.sms, dtype=_TYPE))
         return dict(sm=sm)
 
 
 class Emeasure(object):
-    def __init__(self, only_adaptive_em: bool = False):
-        """
-        only_adaptive_em: 由于计算changeable耗时较长，为了用于模型的快速验证，可以选择不计算，仅保留adaptive_em
-        """
+    def __init__(self):
         self.adaptive_ems = []
-        self.changeable_ems = None if only_adaptive_em else []
+        self.changeable_ems = []
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
         pred, gt = _prepare_data(pred=pred, gt=gt)
-        self.all_fg = np.all(gt)
-        self.all_bg = np.all(~gt)
+        self.gt_fg_numel = np.count_nonzero(gt)
         self.gt_size = gt.shape[0] * gt.shape[1]
-        if self.changeable_ems is not None:
-            changeable_ems = self.cal_changeable_em(pred, gt)
-            self.changeable_ems.append(changeable_ems)
+
+        changeable_ems = self.cal_changeable_em(pred, gt)
+        self.changeable_ems.append(changeable_ems)
         adaptive_em = self.cal_adaptive_em(pred, gt)
         self.adaptive_ems.append(adaptive_em)
 
@@ -254,35 +251,105 @@ class Emeasure(object):
 
     def cal_changeable_em(self, pred: np.ndarray, gt: np.ndarray) -> list:
         changeable_ems = [
-            self.cal_em_with_threshold(pred, gt, threshold=th)
-            for th in np.linspace(0, 1, 256)
+            self.cal_em_with_threshold(pred, gt, threshold=threshold)
+            for threshold in np.linspace(0, 1, 256)
         ]
         return changeable_ems
 
     def cal_em_with_threshold(self, pred: np.ndarray, gt: np.ndarray, threshold: float) -> float:
         binarized_pred = pred >= threshold
-        if self.all_bg:
-            enhanced_matrix = 1 - binarized_pred
-        elif self.all_fg:
-            enhanced_matrix = binarized_pred
+
+        if self.gt_fg_numel == 0:
+            binarized_pred_bg_numel = np.count_nonzero(~binarized_pred)
+            enhanced_matrix_sum = binarized_pred_bg_numel
+        elif self.gt_fg_numel == self.gt_size:
+            binarized_pred_fg_numel = np.count_nonzero(binarized_pred)
+            enhanced_matrix_sum = binarized_pred_fg_numel
         else:
-            enhanced_matrix = self.cal_enhanced_matrix(binarized_pred, gt)
-        em = enhanced_matrix.sum() / (gt.shape[0] * gt.shape[1] - 1 + _EPS)
+            enhanced_matrix_sum = self.cal_enhanced_matrix(binarized_pred, gt)
+        em = enhanced_matrix_sum / (self.gt_size - 1 + _EPS)
         return em
 
-    def cal_enhanced_matrix(self, pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
-        demeaned_pred = pred - pred.mean()
-        demeaned_gt = gt - gt.mean()
-        align_matrix = 2 * (demeaned_gt * demeaned_pred) / (demeaned_gt ** 2 + demeaned_pred ** 2 + _EPS)
-        enhanced_matrix = (align_matrix + 1) ** 2 / 4
+    def cal_enhanced_matrix(self, binarized_pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
+        # demeaned_pred = pred - pred.mean()
+        # demeaned_gt = gt - gt.mean()
+        fg_fg_numel = np.count_nonzero(binarized_pred & gt)
+        fg_bg_numel = np.count_nonzero(binarized_pred & ~gt)
+        # bg_fg_numel = np.count_nonzero(~binarized_pred & gt)
+        bg_fg_numel = self.gt_fg_numel - fg_fg_numel
+        # bg_bg_numel = np.count_nonzero(~binarized_pred & ~gt)
+        bg_bg_numel = self.gt_size - (fg_fg_numel + fg_bg_numel + bg_fg_numel)
+
+        parts_numel = [fg_fg_numel, fg_bg_numel, bg_fg_numel, bg_bg_numel]
+
+        mean_pred_value = (fg_fg_numel + fg_bg_numel) / self.gt_size
+        mean_gt_value = self.gt_fg_numel / self.gt_size
+
+        demeaned_pred_fg_value = 1 - mean_pred_value
+        demeaned_pred_bg_value = 0 - mean_pred_value
+        demeaned_gt_fg_value = 1 - mean_gt_value
+        demeaned_gt_bg_value = 0 - mean_gt_value
+
+        combinations = [(demeaned_pred_fg_value, demeaned_gt_fg_value),
+                        (demeaned_pred_fg_value, demeaned_gt_bg_value),
+                        (demeaned_pred_bg_value, demeaned_gt_fg_value),
+                        (demeaned_pred_bg_value, demeaned_gt_bg_value)]
+
+        results_parts = []
+        for part_numel, combination in zip(parts_numel, combinations):
+            # align_matrix = 2 * (demeaned_gt * demeaned_pred) / (demeaned_gt ** 2 + demeaned_pred ** 2 + _EPS)
+            align_matrix_value = 2 * (combination[0] * combination[1]) / \
+                                 (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+            # enhanced_matrix = (align_matrix + 1) ** 2 / 4
+            enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
+            results_parts.append(enhanced_matrix_value * part_numel)
+
+        # enhanced_matrix = enhanced_matrix.sum()
+        enhanced_matrix = sum(results_parts)
         return enhanced_matrix
 
+    # def cal_enhanced_matrix_parallel(self, binarized_pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
+    #     """
+    #     通过构成数组，使用numpy加速计算，消除for循环，实际带来的增益相较于cal_enhanced_matrix反而是负的，可能是因为转成的矩阵太小
+    #     """
+    #     # demeaned_pred = pred - pred.mean()
+    #     # demeaned_gt = gt - gt.mean()
+    #     fg_fg_numel = np.count_nonzero(binarized_pred & gt)
+    #     fg_bg_numel = np.count_nonzero(binarized_pred & ~gt)
+    #     pred_fg_numel = fg_fg_numel + fg_bg_numel
+    #
+    #     # bg_fg_numel = np.count_nonzero(~binarized_pred & gt)
+    #     bg_fg_numel = self.gt_fg_numel - fg_fg_numel
+    #     # bg_bg_numel = np.count_nonzero(~binarized_pred & ~gt)
+    #     bg_bg_numel = self.gt_size - (pred_fg_numel + bg_fg_numel)
+    #
+    #     parts_numel = np.array([fg_fg_numel, fg_bg_numel, bg_fg_numel, bg_bg_numel], dtype=_TYPE)
+    #
+    #     mean_pred_value = pred_fg_numel / self.gt_size
+    #     mean_gt_value = self.gt_fg_numel / self.gt_size
+    #
+    #     demeaned_pred_fg_value = 1 - mean_pred_value
+    #     demeaned_pred_bg_value = 0 - mean_pred_value
+    #     demeaned_gt_fg_value = 1 - mean_gt_value
+    #     demeaned_gt_bg_value = 0 - mean_gt_value
+    #
+    #     combinations = np.array([[demeaned_pred_fg_value, demeaned_gt_fg_value],
+    #                              [demeaned_pred_fg_value, demeaned_gt_bg_value],
+    #                              [demeaned_pred_bg_value, demeaned_gt_fg_value],
+    #                              [demeaned_pred_bg_value, demeaned_gt_bg_value]], dtype=_TYPE)
+    #
+    #     # align_matrix = 2 * (demeaned_gt * demeaned_pred) / (demeaned_gt ** 2 + demeaned_pred ** 2 + _EPS)
+    #     align_matrix_value = 2 * combinations.prod(axis=-1) / ((combinations ** 2).sum(axis=-1, keepdims=True) +
+    #     _EPS)
+    #     # enhanced_matrix = (align_matrix + 1) ** 2 / 4
+    #     enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
+    #     # enhanced_matrix = enhanced_matrix.sum()
+    #     enhanced_matrix_sum = (enhanced_matrix_value * parts_numel).sum()
+    #     return enhanced_matrix_sum
+
     def get_results(self) -> dict:
-        adaptive_em = np.mean(np.array(self.adaptive_ems, dtype=np.float64))
-        if self.changeable_ems is not None:
-            changeable_em = np.mean(np.array(self.changeable_ems, dtype=np.float64), axis=0)
-        else:
-            changeable_em = None
+        adaptive_em = np.mean(np.array(self.adaptive_ems, dtype=_TYPE))
+        changeable_em = np.mean(np.array(self.changeable_ems, dtype=_TYPE), axis=0)
         return dict(em=dict(adp=adaptive_em, curve=changeable_em))
 
 
@@ -358,5 +425,5 @@ class WeightedFmeasure(object):
         return h
 
     def get_results(self) -> dict:
-        weighted_fm = np.mean(np.array(self.weighted_fms, dtype=np.float64))
+        weighted_fm = np.mean(np.array(self.weighted_fms, dtype=_TYPE))
         return dict(wfm=weighted_fm)
