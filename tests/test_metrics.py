@@ -16,7 +16,7 @@ import sod_metrics as M
 FM = M.Fmeasure()
 WFM = M.WeightedFmeasure()
 SM = M.Smeasure()
-EM = M.Emeasure(only_adaptive_em=False)
+EM = M.Emeasure()
 MAE = M.MAE()
 
 data_root = './test_data'

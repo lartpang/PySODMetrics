@@ -17,6 +17,7 @@ Your improvements and suggestions are welcome.
 
 ## TODO List
 
+* [X] Speed up the calculation of Emeasure.
 * [ ] Add the necessary documentation for different functions.
 
 ## Compared with Matlab Code from Fan <https://github.com/DengPingFan/CODToolbox>
