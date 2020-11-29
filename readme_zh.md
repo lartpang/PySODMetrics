@@ -1,6 +1,6 @@
 <p align="center">
   <img src="./images/logo.png" alt="Logo" width="320" height="auto">
-  <h2 align="center">PySODMetrics: A simple and efficient implementation of SOD metrcis.</h2>
+  <h2 align="center">PySODMetrics: 一份简单有效的SOD指标实现</h2>
 </p>
 
 ## 介绍

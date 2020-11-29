@@ -1,13 +1,13 @@
 <p align="center">
   <img src="./images/logo.png" alt="Logo" width="320" height="auto">
-  <h2 align="center">PySODMetrics: A simple and efficient implementation of SOD metrcis.</h2>
+  <h2 align="center">PySODMetrics: A simple and efficient implementation of SOD metrics</h2>
 </p>
 
 [中文介绍](readme_zh.md)
 
 ## Introduction
 
-A simple and efficient implementation of SOD metrcis
+A simple and efficient implementation of SOD metrics
 
 - Based on `numpy` and `scipy`
 - Verification based on Fan's matlab code <https://github.com/DengPingFan/CODToolbox>
