@@ -1,0 +1,29 @@
+# https://github.com/LongTengDao/TOML/
+
+[tool.isort]
+# https://pycqa.github.io/isort/docs/configuration/options/
+profile = "black"
+multi_line_output = 3
+filter_files = true
+supported_extensions = "py"
+
+[tool.black]
+line-length = 99
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.idea
+  | \.vscode
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | output
+)/
+'''

@@ -42,20 +42,23 @@ For related discussion, please see: <https://github.com/DengPingFan/CODToolbox/i
 ### Download the file as your script
 
 ```shell script
-wget -nc -O metrics.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/sod_metrics/__init__.py
+wget -nc -O metrics.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/py_sod_metrics/sod_metrics.py
+# maybe, you need:
+pip install -r requirements.txt
 ```
 
-`-nc`: If the file 'metrics.py' already exists, it cannot be retrieved.
+NOTE: `-nc`: If the file 'metrics.py' already exists, it cannot be retrieved.
 
-### Requirements
+### Install it as a python package.
 
-```shell
-pip install -r requirements.txt
+```shell script
+pip install pysodmetrics
 ```
 
 ### Examples
  
- * <./tests/test_metrics.py>
+* <./tests/test_metrics.py>
+* <./tests/metric_recorder.py>
 
 ## Thanks
 

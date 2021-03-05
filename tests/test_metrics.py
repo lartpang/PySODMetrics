@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 sys.path.append('../')
 
-import sod_metrics as M
+import py_sod_metrics.sod_metrics as M
 
 FM = M.Fmeasure()
 WFM = M.WeightedFmeasure()

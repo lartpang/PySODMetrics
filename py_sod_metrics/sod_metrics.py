@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.ndimage import convolve, distance_transform_edt as bwdist
 
-__version__ = '1.2.1'
+__version__ = "1.2.1"
 
 _EPS = 1e-16
 _TYPE = np.float64
@@ -88,8 +88,7 @@ class Fmeasure(object):
         changeable_fm = np.mean(np.array(self.changeable_fms, dtype=_TYPE), axis=0)
         precision = np.mean(np.array(self.precisions, dtype=_TYPE), axis=0)  # N, 256
         recall = np.mean(np.array(self.recalls, dtype=_TYPE), axis=0)  # N, 256
-        return dict(fm=dict(adp=adaptive_fm, curve=changeable_fm),
-                    pr=dict(p=precision, r=recall))
+        return dict(fm=dict(adp=adaptive_fm, curve=changeable_fm), pr=dict(p=precision, r=recall))
 
 
 class MAE(object):
@@ -149,11 +148,11 @@ class Smeasure(object):
     def region(self, pred: np.ndarray, gt: np.ndarray) -> float:
         x, y = self.centroid(gt)
         part_info = self.divide_with_xy(pred, gt, x, y)
-        w1, w2, w3, w4 = part_info['weight']
+        w1, w2, w3, w4 = part_info["weight"]
         # assert np.isclose(w1 + w2 + w3 + w4, 1), (w1 + w2 + w3 + w4, pred.mean(), gt.mean())
 
-        pred1, pred2, pred3, pred4 = part_info['pred']
-        gt1, gt2, gt3, gt4 = part_info['gt']
+        pred1, pred2, pred3, pred4 = part_info["pred"]
+        gt1, gt2, gt3, gt4 = part_info["gt"]
         score1 = self.ssim(pred1, gt1)
         score2 = self.ssim(pred2, gt2)
         score3 = self.ssim(pred3, gt3)
@@ -198,9 +197,11 @@ class Smeasure(object):
         # w4 = (h - y) * (w - x) / area
         w4 = 1 - w1 - w2 - w3
 
-        return dict(gt=(gt_LT, gt_RT, gt_LB, gt_RB),
-                    pred=(pred_LT, pred_RT, pred_LB, pred_RB),
-                    weight=(w1, w2, w3, w4))
+        return dict(
+            gt=(gt_LT, gt_RT, gt_LB, gt_RB),
+            pred=(pred_LT, pred_RT, pred_LB, pred_RB),
+            weight=(w1, w2, w3, w4),
+        )
 
     def ssim(self, pred: np.ndarray, gt: np.ndarray) -> float:
         h, w = pred.shape
@@ -272,14 +273,19 @@ class Emeasure(object):
             enhanced_matrix_sum = fg___numel
         else:
             parts_numel, combinations = self.generate_parts_numel_combinations(
-                fg_fg_numel=fg_fg_numel, fg_bg_numel=fg_bg_numel,
-                pred_fg_numel=fg___numel, pred_bg_numel=bg___numel,
+                fg_fg_numel=fg_fg_numel,
+                fg_bg_numel=fg_bg_numel,
+                pred_fg_numel=fg___numel,
+                pred_bg_numel=bg___numel,
             )
 
             results_parts = []
             for i, (part_numel, combination) in enumerate(zip(parts_numel, combinations)):
-                align_matrix_value = 2 * (combination[0] * combination[1]) / \
-                                     (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                align_matrix_value = (
+                    2
+                    * (combination[0] * combination[1])
+                    / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts.append(enhanced_matrix_value * part_numel)
             enhanced_matrix_sum = sum(results_parts)
@@ -309,14 +315,19 @@ class Emeasure(object):
             enhanced_matrix_sum = fg___numel_w_thrs
         else:
             parts_numel_w_thrs, combinations = self.generate_parts_numel_combinations(
-                fg_fg_numel=fg_fg_numel_w_thrs, fg_bg_numel=fg_bg_numel_w_thrs,
-                pred_fg_numel=fg___numel_w_thrs, pred_bg_numel=bg___numel_w_thrs,
+                fg_fg_numel=fg_fg_numel_w_thrs,
+                fg_bg_numel=fg_bg_numel_w_thrs,
+                pred_fg_numel=fg___numel_w_thrs,
+                pred_bg_numel=bg___numel_w_thrs,
             )
 
             results_parts = np.empty(shape=(4, 256), dtype=np.float64)
             for i, (part_numel, combination) in enumerate(zip(parts_numel_w_thrs, combinations)):
-                align_matrix_value = 2 * (combination[0] * combination[1]) / \
-                                     (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                align_matrix_value = (
+                    2
+                    * (combination[0] * combination[1])
+                    / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts[i] = enhanced_matrix_value * part_numel
             enhanced_matrix_sum = results_parts.sum(axis=0)
@@ -324,7 +335,9 @@ class Emeasure(object):
         em = enhanced_matrix_sum / (self.gt_size - 1 + _EPS)
         return em
 
-    def generate_parts_numel_combinations(self, fg_fg_numel, fg_bg_numel, pred_fg_numel, pred_bg_numel):
+    def generate_parts_numel_combinations(
+        self, fg_fg_numel, fg_bg_numel, pred_fg_numel, pred_bg_numel
+    ):
         bg_fg_numel = self.gt_fg_numel - fg_fg_numel
         bg_bg_numel = pred_bg_numel - bg_fg_numel
 
@@ -342,7 +355,7 @@ class Emeasure(object):
             (demeaned_pred_fg_value, demeaned_gt_fg_value),
             (demeaned_pred_fg_value, demeaned_gt_bg_value),
             (demeaned_pred_bg_value, demeaned_gt_fg_value),
-            (demeaned_pred_bg_value, demeaned_gt_bg_value)
+            (demeaned_pred_bg_value, demeaned_gt_bg_value),
         ]
         return parts_numel, combinations
 
@@ -415,7 +428,7 @@ class WeightedFmeasure(object):
         fspecial('gaussian',[shape],[sigma])
         """
         m, n = [(ss - 1) / 2 for ss in shape]
-        y, x = np.ogrid[-m: m + 1, -n: n + 1]
+        y, x = np.ogrid[-m : m + 1, -n : n + 1]
         h = np.exp(-(x * x + y * y) / (2 * sigma * sigma))
         h[h < np.finfo(h.dtype).eps * h.max()] = 0
         sumh = h.sum()

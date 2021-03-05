@@ -35,21 +35,23 @@ matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; m
 ### 下载文件为自己的脚本
 
 ```shell script
-wget -nc -O metrics.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/sod_metrics/__init__.py
+wget -nc -O metrics.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/py_sod_metrics/sod_metrics.py
+# 或许你还需要：
+pip install -r requirements.txt
 ```
 
-`-nc`: 如果文件存在，就不会下载
+注意：`-nc`: 如果文件存在，就不会下载
 
+### 安装成一个包
 
-### 依赖
-
-```shell
-pip install -r requirements.txt
+```shell script
+pip install pysodmetrics
 ```
 
 ### 示例
 
 * <./tests/test_metrics.py>
+* <./tests/metric_recorder.py>
 
 ## 感谢
 
