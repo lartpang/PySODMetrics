@@ -1,11 +1,17 @@
 from setuptools import setup, find_packages
+import py_sod_metrics as my_script
+
+with open("readme.md", "r") as fh:
+    long_description = fh.read()
 
 setup(
     name="pysodmetrics",
     packages=find_packages(),
-    version="1.2.1",
+    version=my_script.__version__,
     license="MIT",
     description="A simple and efficient implementation of SOD metrics.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="lartpang",
     author_email="lartpang@gmail.com",
     url="https://github.com/lartpang/PySODMetrics",

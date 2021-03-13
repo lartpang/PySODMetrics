@@ -1,8 +1,6 @@
 import numpy as np
 from scipy.ndimage import convolve, distance_transform_edt as bwdist
 
-__version__ = "1.2.1"
-
 _EPS = 1e-16
 _TYPE = np.float64
 
@@ -282,9 +280,9 @@ class Emeasure(object):
             results_parts = []
             for i, (part_numel, combination) in enumerate(zip(parts_numel, combinations)):
                 align_matrix_value = (
-                    2
-                    * (combination[0] * combination[1])
-                    / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                        2
+                        * (combination[0] * combination[1])
+                        / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
                 )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts.append(enhanced_matrix_value * part_numel)
@@ -324,9 +322,9 @@ class Emeasure(object):
             results_parts = np.empty(shape=(4, 256), dtype=np.float64)
             for i, (part_numel, combination) in enumerate(zip(parts_numel_w_thrs, combinations)):
                 align_matrix_value = (
-                    2
-                    * (combination[0] * combination[1])
-                    / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                        2
+                        * (combination[0] * combination[1])
+                        / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
                 )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts[i] = enhanced_matrix_value * part_numel
@@ -336,7 +334,7 @@ class Emeasure(object):
         return em
 
     def generate_parts_numel_combinations(
-        self, fg_fg_numel, fg_bg_numel, pred_fg_numel, pred_bg_numel
+            self, fg_fg_numel, fg_bg_numel, pred_fg_numel, pred_bg_numel
     ):
         bg_fg_numel = self.gt_fg_numel - fg_fg_numel
         bg_bg_numel = pred_bg_numel - bg_fg_numel
@@ -428,7 +426,7 @@ class WeightedFmeasure(object):
         fspecial('gaussian',[shape],[sigma])
         """
         m, n = [(ss - 1) / 2 for ss in shape]
-        y, x = np.ogrid[-m : m + 1, -n : n + 1]
+        y, x = np.ogrid[-m: m + 1, -n: n + 1]
         h = np.exp(-(x * x + y * y) / (2 * sigma * sigma))
         h[h < np.finfo(h.dtype).eps * h.max()] = 0
         sumh = h.sum()

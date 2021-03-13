@@ -50,8 +50,8 @@ pip install pysodmetrics
 
 ### 示例
 
-* <./tests/test_metrics.py>
-* <./tests/metric_recorder.py>
+* <examples/metric_recorder.py>
+* <examples/test_metrics.py>
 
 ## 感谢
 
