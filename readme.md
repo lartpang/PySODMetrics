@@ -16,10 +16,14 @@ A simple and efficient implementation of SOD metrics
 
 Your improvements and suggestions are welcome.
 
+### Related Projects
+
+* A Python-based salient object detection and video object segmentation evaluation toolbox. <https://github.com/lartpang/Py-SOD-VOS-EvalToolkit>
+
 ## TODO List
 
 * [X] Speed up the calculation of Emeasure.
-* [ ] Add the necessary documentation for different functions.
+* [X] Add the necessary documentation for different functions.
 
 ## Compared with Matlab Code from Fan <https://github.com/DengPingFan/CODToolbox>
 

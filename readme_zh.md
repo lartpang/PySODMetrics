@@ -14,6 +14,10 @@
 
 欢迎您的改进和建议。
 
+### 相关项目
+
+* A Python-based salient object detection and video object segmentation evaluation toolbox. <https://github.com/lartpang/Py-SOD-VOS-EvalToolkit>
+
 ## 与范的Matlab代码的比较 <https://github.com/DengPingFan/CODToolbox>
 
 在我们的测试中 (测试代码可见`test`文件夹下内容)，结果与Fan的代码一致，如下:

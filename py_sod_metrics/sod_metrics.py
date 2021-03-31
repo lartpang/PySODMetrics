@@ -6,6 +6,16 @@ _TYPE = np.float64
 
 
 def _prepare_data(pred: np.ndarray, gt: np.ndarray) -> tuple:
+    """
+    A numpy-based function for preparing ``pred`` and ``gt``.
+
+    - for ``pred``, it looks like ``mapminmax(im2double(...))`` of matlab;
+    - ``gt`` will be binarized by 128.
+
+    :param pred: prediction
+    :param gt: mask
+    :return: pred, gt
+    """
     gt = gt > 128
     # im2double, mapminmax
     pred = pred / 255
@@ -15,11 +25,34 @@ def _prepare_data(pred: np.ndarray, gt: np.ndarray) -> tuple:
 
 
 def _get_adaptive_threshold(matrix: np.ndarray, max_value: float = 1) -> float:
+    """
+    Return an adaptive threshold, which is equal to twice the mean of ``matrix``.
+
+    :param matrix: a data array
+    :param max_value: the upper limit of the threshold
+    :return: min(2 * matrix.mean(), max_value)
+    """
     return min(2 * matrix.mean(), max_value)
 
 
 class Fmeasure(object):
     def __init__(self, beta: float = 0.3):
+        """
+        F-measure for SOD.
+
+        ::
+
+            @inproceedings{Fmeasure,
+                title={Frequency-tuned salient region detection},
+                author={Achanta, Radhakrishna and Hemami, Sheila and Estrada, Francisco and S{\"u}sstrunk, Sabine},
+                booktitle=CVPR,
+                number={CONF},
+                pages={1597--1604},
+                year={2009}
+            }
+
+        :param beta: the weight of the precision
+        """
         self.beta = beta
         self.precisions = []
         self.recalls = []
@@ -38,8 +71,12 @@ class Fmeasure(object):
         self.changeable_fms.append(changeable_fms)
 
     def cal_adaptive_fm(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        # 快速统计numpy数组的非零值建议使用np.count_nonzero，
-        # 一个简单的小实验可见tests/test_speed_for_count_nonzero.py
+        """
+        Calculate the adaptive F-measure.
+
+        :return: adaptive_fm
+        """
+        # ``np.count_nonzero`` is faster and better
         adaptive_threshold = _get_adaptive_threshold(pred, max_value=1)
         binary_predcition = pred >= adaptive_threshold
         area_intersection = binary_predcition[gt].sum()
@@ -52,6 +89,17 @@ class Fmeasure(object):
         return adaptive_fm
 
     def cal_pr(self, pred: np.ndarray, gt: np.ndarray) -> tuple:
+        """
+        Calculate the corresponding precision and recall when the threshold changes from 0 to 255.
+
+        These precisions and recalls can be used to obtain the mean F-measure, maximum F-measure,
+        precision-recall curve and F-measure-threshold curve.
+
+        For convenience, ``changeable_fms`` is provided here, which can be used directly to obtain
+        the mean F-measure, maximum F-measure and F-measure-threshold curve.
+
+        :return: precisions, recalls, changeable_fms
+        """
         # 1. 获取预测结果在真值前背景区域中的直方图
         pred = (pred * 255).astype(np.uint8)
         bins = np.linspace(0, 256, 257)
@@ -71,8 +119,6 @@ class Fmeasure(object):
         T = max(np.count_nonzero(gt), 1)
         # TODO: T=0 或者 特定阈值下fg_w_thrs=0或者bg_w_thrs=0，这些都会包含在TPs[i]=0的情况中，
         #  但是这里使用TPs不便于处理列表
-        # T=0 -> fg_w_thrs=[0, ..., 0] -> TPs=[0, ..., 0] 解决办法：T重新赋值为1
-        # Ps[i] = 0 -> fg_w_thrs[i] = 0, bg_w_thrs[i] = 0
         precisions = TPs / Ps
         recalls = TPs / T
 
@@ -82,6 +128,11 @@ class Fmeasure(object):
         return precisions, recalls, changeable_fms
 
     def get_results(self) -> dict:
+        """
+        Return the results about F-measure.
+
+        :return: dict(fm=dict(adp=adaptive_fm, curve=changeable_fm), pr=dict(p=precision, r=recall))
+        """
         adaptive_fm = np.mean(np.array(self.adaptive_fms, _TYPE))
         changeable_fm = np.mean(np.array(self.changeable_fms, dtype=_TYPE), axis=0)
         precision = np.mean(np.array(self.precisions, dtype=_TYPE), axis=0)  # N, 256
@@ -91,6 +142,19 @@ class Fmeasure(object):
 
 class MAE(object):
     def __init__(self):
+        """
+        MAE(mean absolute error) for SOD.
+
+        ::
+
+            @inproceedings{MAE,
+                title={Saliency filters: Contrast based filtering for salient region detection},
+                author={Perazzi, Federico and Kr{\"a}henb{\"u}hl, Philipp and Pritch, Yael and Hornung, Alexander},
+                booktitle=CVPR,
+                pages={733--740},
+                year={2012}
+            }
+        """
         self.maes = []
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
@@ -99,17 +163,42 @@ class MAE(object):
         mae = self.cal_mae(pred, gt)
         self.maes.append(mae)
 
-    def cal_mae(self, pred: np.ndarray, gt: np.ndarray) -> float:
+    def cal_mae(self, pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
+        """
+        Calculate the mean absolute error.
+
+        :return: mae
+        """
         mae = np.mean(np.abs(pred - gt))
         return mae
 
     def get_results(self) -> dict:
+        """
+        Return the results about MAE.
+
+        :return: dict(mae=mae)
+        """
         mae = np.mean(np.array(self.maes, _TYPE))
         return dict(mae=mae)
 
 
 class Smeasure(object):
     def __init__(self, alpha: float = 0.5):
+        """
+        S-measure(Structure-measure) of SOD.
+
+        ::
+
+            @inproceedings{Smeasure,
+                title={Structure-measure: A new way to eval foreground maps},
+                author={Fan, Deng-Ping and Cheng, Ming-Ming and Liu, Yun and Li, Tao and Borji, Ali},
+                booktitle=ICCV,
+                pages={4548--4557},
+                year={2017}
+            }
+
+        :param alpha: the weight for balancing the object score and the region score
+        """
         self.sms = []
         self.alpha = alpha
 
@@ -120,6 +209,11 @@ class Smeasure(object):
         self.sms.append(sm)
 
     def cal_sm(self, pred: np.ndarray, gt: np.ndarray) -> float:
+        """
+        Calculate the S-measure.
+
+        :return: s-measure
+        """
         y = np.mean(gt)
         if y == 0:
             sm = 1 - np.mean(pred)
@@ -131,6 +225,9 @@ class Smeasure(object):
         return sm
 
     def object(self, pred: np.ndarray, gt: np.ndarray) -> float:
+        """
+        Calculate the object score.
+        """
         fg = pred * gt
         bg = (1 - pred) * (1 - gt)
         u = np.mean(gt)
@@ -144,6 +241,9 @@ class Smeasure(object):
         return score
 
     def region(self, pred: np.ndarray, gt: np.ndarray) -> float:
+        """
+        Calculate the region score.
+        """
         x, y = self.centroid(gt)
         part_info = self.divide_with_xy(pred, gt, x, y)
         w1, w2, w3, w4 = part_info["weight"]
@@ -160,8 +260,12 @@ class Smeasure(object):
 
     def centroid(self, matrix: np.ndarray) -> tuple:
         """
-        为了保证与matlab代码的一致性，这里对中心坐标进行了加一，在后面划分区域的时候就不用使用多余的加一操作
-        因为matlab里的1:X生成的序列会包含X这个值
+        To ensure consistency with the matlab code, one is added to the centroid coordinate,
+        so there is no need to use the redundant addition operation when dividing the region later,
+        because the sequence generated by ``1:X`` in matlab will contain ``X``.
+
+        :param matrix: a data array
+        :return: the centroid coordinate
         """
         h, w = matrix.shape
         if matrix.sum() == 0:
@@ -175,7 +279,10 @@ class Smeasure(object):
             y = np.round(np.sum(np.sum(matrix, axis=1) * row_ids) / area_object)
         return int(x) + 1, int(y) + 1
 
-    def divide_with_xy(self, pred: np.ndarray, gt: np.ndarray, x, y) -> dict:
+    def divide_with_xy(self, pred: np.ndarray, gt: np.ndarray, x: int, y: int) -> dict:
+        """
+        Use (x,y) to divide the ``pred`` and the ``gt`` into four submatrices, respectively.
+        """
         h, w = gt.shape
         area = h * w
 
@@ -192,7 +299,6 @@ class Smeasure(object):
         w1 = x * y / area
         w2 = y * (w - x) / area
         w3 = (h - y) * x / area
-        # w4 = (h - y) * (w - x) / area
         w4 = 1 - w1 - w2 - w3
 
         return dict(
@@ -202,6 +308,9 @@ class Smeasure(object):
         )
 
     def ssim(self, pred: np.ndarray, gt: np.ndarray) -> float:
+        """
+        Calculate the ssim score.
+        """
         h, w = pred.shape
         N = h * w
 
@@ -224,12 +333,32 @@ class Smeasure(object):
         return score
 
     def get_results(self) -> dict:
+        """
+        Return the results about S-measure.
+
+        :return: dict(sm=sm)
+        """
         sm = np.mean(np.array(self.sms, dtype=_TYPE))
         return dict(sm=sm)
 
 
 class Emeasure(object):
     def __init__(self):
+        """
+        E-measure(Enhanced-alignment Measure) for SOD.
+
+        More details about the implementation can be found in https://www.yuque.com/lart/blog/lwgt38
+
+        ::
+
+            @inproceedings{Emeasure,
+                title="Enhanced-alignment Measure for Binary Foreground Map Evaluation",
+                author="Deng-Ping {Fan} and Cheng {Gong} and Yang {Cao} and Bo {Ren} and Ming-Ming {Cheng} and Ali {Borji}",
+                booktitle=IJCAI,
+                pages="698--704",
+                year={2018}
+            }
+        """
         self.adaptive_ems = []
         self.changeable_ems = []
 
@@ -244,19 +373,33 @@ class Emeasure(object):
         self.adaptive_ems.append(adaptive_em)
 
     def cal_adaptive_em(self, pred: np.ndarray, gt: np.ndarray) -> float:
+        """
+        Calculate the adaptive E-measure.
+
+        :return: adaptive_em
+        """
         adaptive_threshold = _get_adaptive_threshold(pred, max_value=1)
         adaptive_em = self.cal_em_with_threshold(pred, gt, threshold=adaptive_threshold)
         return adaptive_em
 
     def cal_changeable_em(self, pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
+        """
+        Calculate the changeable E-measure, which can be used to obtain the mean E-measure,
+        the maximum E-measure and the E-measure-threshold curve.
+
+        :return: changeable_ems
+        """
         changeable_ems = self.cal_em_with_cumsumhistogram(pred, gt)
         return changeable_ems
 
     def cal_em_with_threshold(self, pred: np.ndarray, gt: np.ndarray, threshold: float) -> float:
         """
-        函数内部变量命名规则：
-            pred属性(前景fg、背景bg)_gt属性(前景fg、背景bg)_变量含义
-            如果仅考虑pred或者gt，则另一个对应的属性位置使用`_`替换
+        Calculate the E-measure corresponding to the specific threshold.
+
+        Variable naming rules within the function:
+        ``[pred attribute(foreground fg, background bg)]_[gt attribute(foreground fg, background bg)]_[meaning]``
+
+        If only ``pred`` or ``gt`` is considered, another corresponding attribute location is replaced with '``_``'.
         """
         binarized_pred = pred >= threshold
         fg_fg_numel = np.count_nonzero(binarized_pred & gt)
@@ -280,9 +423,9 @@ class Emeasure(object):
             results_parts = []
             for i, (part_numel, combination) in enumerate(zip(parts_numel, combinations)):
                 align_matrix_value = (
-                        2
-                        * (combination[0] * combination[1])
-                        / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                    2
+                    * (combination[0] * combination[1])
+                    / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
                 )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts.append(enhanced_matrix_value * part_numel)
@@ -293,9 +436,12 @@ class Emeasure(object):
 
     def cal_em_with_cumsumhistogram(self, pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
         """
-        函数内部变量命名规则：
-            pred属性(前景fg、背景bg)_gt属性(前景fg、背景bg)_变量含义
-            如果仅考虑pred或者gt，则另一个对应的属性位置使用`_`替换
+        Calculate the E-measure corresponding to the threshold that varies from 0 to 255..
+
+        Variable naming rules within the function:
+        ``[pred attribute(foreground fg, background bg)]_[gt attribute(foreground fg, background bg)]_[meaning]``
+
+        If only ``pred`` or ``gt`` is considered, another corresponding attribute location is replaced with '``_``'.
         """
         pred = (pred * 255).astype(np.uint8)
         bins = np.linspace(0, 256, 257)
@@ -322,9 +468,9 @@ class Emeasure(object):
             results_parts = np.empty(shape=(4, 256), dtype=np.float64)
             for i, (part_numel, combination) in enumerate(zip(parts_numel_w_thrs, combinations)):
                 align_matrix_value = (
-                        2
-                        * (combination[0] * combination[1])
-                        / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                    2
+                    * (combination[0] * combination[1])
+                    / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
                 )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts[i] = enhanced_matrix_value * part_numel
@@ -334,7 +480,7 @@ class Emeasure(object):
         return em
 
     def generate_parts_numel_combinations(
-            self, fg_fg_numel, fg_bg_numel, pred_fg_numel, pred_bg_numel
+        self, fg_fg_numel, fg_bg_numel, pred_fg_numel, pred_bg_numel
     ):
         bg_fg_numel = self.gt_fg_numel - fg_fg_numel
         bg_bg_numel = pred_bg_numel - bg_fg_numel
@@ -358,6 +504,11 @@ class Emeasure(object):
         return parts_numel, combinations
 
     def get_results(self) -> dict:
+        """
+        Return the results about E-measure.
+
+        :return: dict(em=dict(adp=adaptive_em, curve=changeable_em))
+        """
         adaptive_em = np.mean(np.array(self.adaptive_ems, dtype=_TYPE))
         changeable_em = np.mean(np.array(self.changeable_ems, dtype=_TYPE), axis=0)
         return dict(em=dict(adp=adaptive_em, curve=changeable_em))
@@ -365,6 +516,21 @@ class Emeasure(object):
 
 class WeightedFmeasure(object):
     def __init__(self, beta: float = 1):
+        """
+        Weighted F-measure for SOD.
+
+        ::
+
+            @inproceedings{wFmeasure,
+                title={How to eval foreground maps?},
+                author={Margolin, Ran and Zelnik-Manor, Lihi and Tal, Ayellet},
+                booktitle=CVPR,
+                pages={248--255},
+                year={2014}
+            }
+
+        :param beta: the weight of the precision
+        """
         self.beta = beta
         self.weighted_fms = []
 
@@ -378,6 +544,9 @@ class WeightedFmeasure(object):
         self.weighted_fms.append(wfm)
 
     def cal_wfm(self, pred: np.ndarray, gt: np.ndarray) -> float:
+        """
+        Calculate the weighted F-measure.
+        """
         # [Dst,IDXT] = bwdist(dGT);
         Dst, Idxt = bwdist(gt == 0, return_indices=True)
 
@@ -426,7 +595,7 @@ class WeightedFmeasure(object):
         fspecial('gaussian',[shape],[sigma])
         """
         m, n = [(ss - 1) / 2 for ss in shape]
-        y, x = np.ogrid[-m: m + 1, -n: n + 1]
+        y, x = np.ogrid[-m : m + 1, -n : n + 1]
         h = np.exp(-(x * x + y * y) / (2 * sigma * sigma))
         h[h < np.finfo(h.dtype).eps * h.max()] = 0
         sumh = h.sum()
@@ -435,5 +604,10 @@ class WeightedFmeasure(object):
         return h
 
     def get_results(self) -> dict:
+        """
+        Return the results about weighted F-measure.
+
+        :return: dict(wfm=weighted_fm)
+        """
         weighted_fm = np.mean(np.array(self.weighted_fms, dtype=_TYPE))
         return dict(wfm=weighted_fm)
