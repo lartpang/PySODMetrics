@@ -5,7 +5,6 @@ from scipy.ndimage import distance_transform_edt as bwdist
 
 _EPS = 1e-16
 _TYPE = np.float64
-__version__ = "1.2.4"
 
 
 def _prepare_data(pred: np.ndarray, gt: np.ndarray) -> tuple:
