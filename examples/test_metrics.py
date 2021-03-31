@@ -39,15 +39,35 @@ em = EM.get_results()["em"]
 mae = MAE.get_results()["mae"]
 
 results = {
-    "Smeasure": sm.round(3),
-    "wFmeasure": wfm.round(3),
-    "MAE": mae.round(3),
-    "adpEm": em["adp"].round(3),
-    "meanEm": em["curve"].mean().round(3),
-    "maxEm": em["curve"].max().round(3),
-    "adpFm": fm["adp"].round(3),
-    "meanFm": fm["curve"].mean().round(3),
-    "maxFm": fm["curve"].max().round(3),
+    "Smeasure": sm,
+    "wFmeasure": wfm,
+    "MAE": mae,
+    "adpEm": em["adp"],
+    "meanEm": em["curve"].mean(),
+    "maxEm": em["curve"].max(),
+    "adpFm": fm["adp"],
+    "meanFm": fm["curve"].mean(),
+    "maxFm": fm["curve"].max(),
 }
 
 print(results)
+# 'Smeasure': 0.9029763868504661,
+# 'wFmeasure': 0.5579812753638986,
+# 'MAE': 0.03705558476661653,
+# 'adpEm': 0.9408760066970631,
+# 'meanEm': 0.9566258293508715,
+# 'maxEm': 0.966954482892271,
+# 'adpFm': 0.5816750824038355,
+# 'meanFm': 0.577051059518767,
+# 'maxFm': 0.5886784581120638
+
+# version 1.2.3
+# 'Smeasure': 0.9029763868504661,
+# 'wFmeasure': 0.5579812753638986,
+# 'MAE': 0.03705558476661653,
+# 'adpEm': 0.9408760066970631,
+# 'meanEm': 0.9566258293508715,
+# 'maxEm': 0.966954482892271,
+# 'adpFm': 0.5816750824038355,
+# 'meanFm': 0.577051059518767,
+# 'maxFm': 0.5886784581120638
