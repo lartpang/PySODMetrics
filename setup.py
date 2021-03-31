@@ -6,7 +6,7 @@ with open("readme.md", "r") as fh:
 setup(
     name="pysodmetrics",
     packages=find_packages(),
-    version="1.2.3",
+    version="1.2.4",
     license="MIT",
     description="A simple and efficient implementation of SOD metrics.",
     long_description=long_description,
