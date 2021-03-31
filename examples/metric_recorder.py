@@ -5,7 +5,7 @@
 
 import numpy as np
 
-from py_sod_metrics import Emeasure, Fmeasure, MAE, Smeasure, WeightedFmeasure
+from py_sod_metrics import MAE, Emeasure, Fmeasure, Smeasure, WeightedFmeasure
 
 
 def ndarray_to_basetype(data):

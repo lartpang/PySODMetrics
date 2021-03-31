@@ -9,7 +9,7 @@ import cv2
 from tqdm import tqdm
 
 # pip install pysodmetrics
-from py_sod_metrics import Emeasure, Fmeasure, MAE, Smeasure, WeightedFmeasure
+from py_sod_metrics import MAE, Emeasure, Fmeasure, Smeasure, WeightedFmeasure
 
 FM = Fmeasure()
 WFM = WeightedFmeasure()
