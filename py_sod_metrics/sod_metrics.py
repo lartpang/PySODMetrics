@@ -3,7 +3,7 @@ import numpy as np
 from scipy.ndimage import convolve
 from scipy.ndimage import distance_transform_edt as bwdist
 
-_EPS = 1e-16
+_EPS = np.spacing(1)    # the different implementation of epsilon (extreme min value) between numpy and matlab
 _TYPE = np.float64
 
 
@@ -238,7 +238,7 @@ class Smeasure(object):
 
     def s_object(self, pred: np.ndarray, gt: np.ndarray) -> float:
         x = np.mean(pred[gt == 1])
-        sigma_x = np.std(pred[gt == 1])
+        sigma_x = np.std(pred[gt == 1], ddof=1)
         score = 2 * x / (np.power(x, 2) + 1 + sigma_x + _EPS)
         return score
 
