@@ -18,12 +18,12 @@ Your improvements and suggestions are welcome.
 
 ### Related Projects
 
-* A Python-based salient object detection and video object segmentation evaluation toolbox. <https://github.com/lartpang/Py-SOD-VOS-EvalToolkit>
+- A Python-based salient object detection and video object segmentation evaluation toolbox. <https://github.com/lartpang/Py-SOD-VOS-EvalToolkit>
 
 ## TODO List
 
-* [X] Speed up the calculation of Emeasure.
-* [X] Add the necessary documentation for different functions.
+- [x] Speed up the calculation of Emeasure.
+- [x] Add the necessary documentation for different functions.
 
 ## Compared with Matlab Code from Fan <https://github.com/DengPingFan/CODToolbox>
 
@@ -36,10 +36,8 @@ matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; m
 
 **NOTE**
 
-The matlab code based here <https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102>
-needs to change `Bi_sal(sal>threshold)=1;` to `Bi_sal(sal>=threshold)=1;`.
-
-For related discussion, please see: <https://github.com/DengPingFan/CODToolbox/issues/1>
+- The matlab code based here <https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102> needs to change `Bi_sal(sal>threshold)=1;` to `Bi_sal(sal>=threshold)=1;`. For related discussion, please see: <https://github.com/DengPingFan/CODToolbox/issues/1>
+- 2021-12-20 (version `1.3.0`): Due to the difference between numpy and matlab, in version `1.2.x`, there are very slight differences on some metrics between the results of the matlab code and ours. The recent PR (https://github.com/lartpang/PySODMetrics/pull/3) alleviated this problem. However, there are still very small differences on E-measure. The results in most papers are rounded off to three or four significant figures, so, there is no obvious difference between the new version and the version `1.2.x` for them.
 
 ## Usage
 
@@ -61,13 +59,13 @@ pip install pysodmetrics
 
 ### Examples
 
-* <./examples/test_metrics.py>
-* <./examples/metric_recorder.py>
+- <./examples/test_metrics.py>
+- <./examples/metric_recorder.py>
 
 ## Thanks
 
-* <https://github.com/DengPingFan/CODToolbox>
-    - By DengPingFan(<https://github.com/DengPingFan>)
+- <https://github.com/DengPingFan/CODToolbox>
+  - By DengPingFan(<https://github.com/DengPingFan>)
 
 ## Reference
 

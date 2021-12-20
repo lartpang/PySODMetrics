@@ -5,10 +5,10 @@
 
 ## 介绍
 
-一份简单有效的SOD指标实现
+一份简单有效的 SOD 指标实现
 
 - 基于`numpy`和极少量`scipy.ndimage`代码
-- 基于DengPing Fan <https://github.com/DengPingFan/CODToolbox>
+- 基于 DengPing Fan <https://github.com/DengPingFan/CODToolbox>
 - 结构简单，易于扩展
 - 代码轻量且快速
 
@@ -16,11 +16,11 @@
 
 ### 相关项目
 
-* A Python-based salient object detection and video object segmentation evaluation toolbox. <https://github.com/lartpang/Py-SOD-VOS-EvalToolkit>
+- A Python-based salient object detection and video object segmentation evaluation toolbox. <https://github.com/lartpang/Py-SOD-VOS-EvalToolkit>
 
-## 与范的Matlab代码的比较 <https://github.com/DengPingFan/CODToolbox>
+## 与范的 Matlab 代码的比较 <https://github.com/DengPingFan/CODToolbox>
 
-在我们的测试中 (测试代码可见`test`文件夹下内容)，结果与Fan的代码一致，如下:
+在我们的测试中 (测试代码可见`test`文件夹下内容)，结果与 Fan 的代码一致，如下:
 
 ```text
 ours:   Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; maxEm:0.967; adpFm:0.582; meanFm:0.577; maxFm:0.589
@@ -29,10 +29,8 @@ matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; m
 
 **注意**
 
-此处基于的matlab代码需要将<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102>
-的`Bi_sal(sal>threshold)=1;`改为` Bi_sal(sal>=threshold)=1;`。
-
-相关讨论见：<https://github.com/DengPingFan/CODToolbox/issues/1>
+- 此处基于的 matlab 代码需要将<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102> 的`Bi_sal(sal>threshold)=1;`改为` Bi_sal(sal>=threshold)=1;`。相关讨论见：<https://github.com/DengPingFan/CODToolbox/issues/1>
+- 2021-12-20 (Version `1.3.0`)：由于 numpy 和 matlab 的不同，在 `1.2.x` 版本中，matlab 代码的结果与我们的结果在某些指标上存在非常细微的差异。最近的 PR (https://github.com/lartpang/PySODMetrics/pull/3) 缓解了这个问题。但是，在 E-measure 上仍然存在非常小的差异。大多数论文中的结果都四舍五入到三四位有效数字，因此，新版本与“1.2.x”版本之间没有明显差异。
 
 ## 使用
 
@@ -54,13 +52,13 @@ pip install pysodmetrics
 
 ### 示例
 
-* <examples/metric_recorder.py>
-* <examples/test_metrics.py>
+- <examples/metric_recorder.py>
+- <examples/test_metrics.py>
 
 ## 感谢
 
-* <https://github.com/DengPingFan/CODToolbox>
-    - By DengPingFan(<https://github.com/DengPingFan>)
+- <https://github.com/DengPingFan/CODToolbox>
+  - By DengPingFan(<https://github.com/DengPingFan>)
 
 ## 参考文献
 
