@@ -4,11 +4,12 @@
 # @GitHub  : https://github.com/lartpang
 
 import os
+import sys
+from pprint import pprint
 
 import cv2
-from tqdm import tqdm
 
-# pip install pysodmetrics
+sys.path.append("..")
 from py_sod_metrics import MAE, Emeasure, Fmeasure, Smeasure, WeightedFmeasure
 
 FM = Fmeasure()
@@ -21,7 +22,8 @@ data_root = "./test_data"
 mask_root = os.path.join(data_root, "masks")
 pred_root = os.path.join(data_root, "preds")
 mask_name_list = sorted(os.listdir(mask_root))
-for mask_name in tqdm(mask_name_list, total=len(mask_name_list)):
+for i, mask_name in enumerate(mask_name_list):
+    print(f"[{i}] Processing {mask_name}...")
     mask_path = os.path.join(mask_root, mask_name)
     pred_path = os.path.join(pred_root, mask_name)
     mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
@@ -50,24 +52,30 @@ results = {
     "maxFm": fm["curve"].max(),
 }
 
-print(results)
-# 'Smeasure': 0.9029763868504661,
-# 'wFmeasure': 0.5579812753638986,
-# 'MAE': 0.03705558476661653,
-# 'adpEm': 0.9408760066970631,
-# 'meanEm': 0.9566258293508715,
-# 'maxEm': 0.966954482892271,
-# 'adpFm': 0.5816750824038355,
-# 'meanFm': 0.577051059518767,
-# 'maxFm': 0.5886784581120638
+default_results = {
+    "v1_2_3": {
+        "Smeasure": 0.9029763868504661,
+        "wFmeasure": 0.5579812753638986,
+        "MAE": 0.03705558476661653,
+        "adpEm": 0.9408760066970631,
+        "meanEm": 0.9566258293508715,
+        "maxEm": 0.966954482892271,
+        "adpFm": 0.5816750824038355,
+        "meanFm": 0.577051059518767,
+        "maxFm": 0.5886784581120638,
+    },
+    "v1_3_0": {
+        "Smeasure": 0.9029761578759272,
+        "wFmeasure": 0.5579812753638986,
+        "MAE": 0.03705558476661653,
+        "adpEm": 0.9408760066970617,
+        "meanEm": 0.9566258293508704,
+        "maxEm": 0.9669544828922699,
+        "adpFm": 0.5816750824038355,
+        "meanFm": 0.577051059518767,
+        "maxFm": 0.5886784581120638,
+    },
+}
 
-# version 1.2.3
-# 'Smeasure': 0.9029763868504661,
-# 'wFmeasure': 0.5579812753638986,
-# 'MAE': 0.03705558476661653,
-# 'adpEm': 0.9408760066970631,
-# 'meanEm': 0.9566258293508715,
-# 'maxEm': 0.966954482892271,
-# 'adpFm': 0.5816750824038355,
-# 'meanFm': 0.577051059518767,
-# 'maxFm': 0.5886784581120638
+pprint(results)
+pprint({k: default_value - results[k] for k, default_value in default_results["v1_3_0"].items()})
