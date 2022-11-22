@@ -3,38 +3,7 @@ import numpy as np
 from scipy.ndimage import convolve
 from scipy.ndimage import distance_transform_edt as bwdist
 
-_EPS = np.spacing(1)    # the different implementation of epsilon (extreme min value) between numpy and matlab
-_TYPE = np.float64
-
-
-def _prepare_data(pred: np.ndarray, gt: np.ndarray) -> tuple:
-    """
-    A numpy-based function for preparing ``pred`` and ``gt``.
-
-    - for ``pred``, it looks like ``mapminmax(im2double(...))`` of matlab;
-    - ``gt`` will be binarized by 128.
-
-    :param pred: prediction
-    :param gt: mask
-    :return: pred, gt
-    """
-    gt = gt > 128
-    # im2double, mapminmax
-    pred = pred / 255
-    if pred.max() != pred.min():
-        pred = (pred - pred.min()) / (pred.max() - pred.min())
-    return pred, gt
-
-
-def _get_adaptive_threshold(matrix: np.ndarray, max_value: float = 1) -> float:
-    """
-    Return an adaptive threshold, which is equal to twice the mean of ``matrix``.
-
-    :param matrix: a data array
-    :param max_value: the upper limit of the threshold
-    :return: min(2 * matrix.mean(), max_value)
-    """
-    return min(2 * matrix.mean(), max_value)
+from .utils import EPS, TYPE, get_adaptive_threshold, prepare_data
 
 
 class Fmeasure(object):
@@ -62,7 +31,7 @@ class Fmeasure(object):
         self.changeable_fms = []
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
-        pred, gt = _prepare_data(pred, gt)
+        pred, gt = prepare_data(pred, gt)
 
         adaptive_fm = self.cal_adaptive_fm(pred=pred, gt=gt)
         self.adaptive_fms.append(adaptive_fm)
@@ -79,7 +48,7 @@ class Fmeasure(object):
         :return: adaptive_fm
         """
         # ``np.count_nonzero`` is faster and better
-        adaptive_threshold = _get_adaptive_threshold(pred, max_value=1)
+        adaptive_threshold = get_adaptive_threshold(pred, max_value=1)
         binary_predcition = pred >= adaptive_threshold
         area_intersection = binary_predcition[gt].sum()
         if area_intersection == 0:
@@ -135,10 +104,10 @@ class Fmeasure(object):
 
         :return: dict(fm=dict(adp=adaptive_fm, curve=changeable_fm), pr=dict(p=precision, r=recall))
         """
-        adaptive_fm = np.mean(np.array(self.adaptive_fms, _TYPE))
-        changeable_fm = np.mean(np.array(self.changeable_fms, dtype=_TYPE), axis=0)
-        precision = np.mean(np.array(self.precisions, dtype=_TYPE), axis=0)  # N, 256
-        recall = np.mean(np.array(self.recalls, dtype=_TYPE), axis=0)  # N, 256
+        adaptive_fm = np.mean(np.array(self.adaptive_fms, TYPE))
+        changeable_fm = np.mean(np.array(self.changeable_fms, dtype=TYPE), axis=0)
+        precision = np.mean(np.array(self.precisions, dtype=TYPE), axis=0)  # N, 256
+        recall = np.mean(np.array(self.recalls, dtype=TYPE), axis=0)  # N, 256
         return dict(fm=dict(adp=adaptive_fm, curve=changeable_fm), pr=dict(p=precision, r=recall))
 
 
@@ -160,7 +129,7 @@ class MAE(object):
         self.maes = []
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
-        pred, gt = _prepare_data(pred, gt)
+        pred, gt = prepare_data(pred, gt)
 
         mae = self.cal_mae(pred, gt)
         self.maes.append(mae)
@@ -180,7 +149,7 @@ class MAE(object):
 
         :return: dict(mae=mae)
         """
-        mae = np.mean(np.array(self.maes, _TYPE))
+        mae = np.mean(np.array(self.maes, TYPE))
         return dict(mae=mae)
 
 
@@ -205,7 +174,7 @@ class Smeasure(object):
         self.alpha = alpha
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
-        pred, gt = _prepare_data(pred=pred, gt=gt)
+        pred, gt = prepare_data(pred=pred, gt=gt)
 
         sm = self.cal_sm(pred, gt)
         self.sms.append(sm)
@@ -239,7 +208,7 @@ class Smeasure(object):
     def s_object(self, pred: np.ndarray, gt: np.ndarray) -> float:
         x = np.mean(pred[gt == 1])
         sigma_x = np.std(pred[gt == 1], ddof=1)
-        score = 2 * x / (np.power(x, 2) + 1 + sigma_x + _EPS)
+        score = 2 * x / (np.power(x, 2) + 1 + sigma_x + EPS)
         return score
 
     def region(self, pred: np.ndarray, gt: np.ndarray) -> float:
@@ -325,7 +294,7 @@ class Smeasure(object):
         beta = (x ** 2 + y ** 2) * (sigma_x + sigma_y)
 
         if alpha != 0:
-            score = alpha / (beta + _EPS)
+            score = alpha / (beta + EPS)
         elif alpha == 0 and beta == 0:
             score = 1
         else:
@@ -338,7 +307,7 @@ class Smeasure(object):
 
         :return: dict(sm=sm)
         """
-        sm = np.mean(np.array(self.sms, dtype=_TYPE))
+        sm = np.mean(np.array(self.sms, dtype=TYPE))
         return dict(sm=sm)
 
 
@@ -363,7 +332,7 @@ class Emeasure(object):
         self.changeable_ems = []
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
-        pred, gt = _prepare_data(pred=pred, gt=gt)
+        pred, gt = prepare_data(pred=pred, gt=gt)
         self.gt_fg_numel = np.count_nonzero(gt)
         self.gt_size = gt.shape[0] * gt.shape[1]
 
@@ -378,7 +347,7 @@ class Emeasure(object):
 
         :return: adaptive_em
         """
-        adaptive_threshold = _get_adaptive_threshold(pred, max_value=1)
+        adaptive_threshold = get_adaptive_threshold(pred, max_value=1)
         adaptive_em = self.cal_em_with_threshold(pred, gt, threshold=adaptive_threshold)
         return adaptive_em
 
@@ -425,13 +394,13 @@ class Emeasure(object):
                 align_matrix_value = (
                     2
                     * (combination[0] * combination[1])
-                    / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                    / (combination[0] ** 2 + combination[1] ** 2 + EPS)
                 )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts.append(enhanced_matrix_value * part_numel)
             enhanced_matrix_sum = sum(results_parts)
 
-        em = enhanced_matrix_sum / (self.gt_size - 1 + _EPS)
+        em = enhanced_matrix_sum / (self.gt_size - 1 + EPS)
         return em
 
     def cal_em_with_cumsumhistogram(self, pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
@@ -470,13 +439,13 @@ class Emeasure(object):
                 align_matrix_value = (
                     2
                     * (combination[0] * combination[1])
-                    / (combination[0] ** 2 + combination[1] ** 2 + _EPS)
+                    / (combination[0] ** 2 + combination[1] ** 2 + EPS)
                 )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts[i] = enhanced_matrix_value * part_numel
             enhanced_matrix_sum = results_parts.sum(axis=0)
 
-        em = enhanced_matrix_sum / (self.gt_size - 1 + _EPS)
+        em = enhanced_matrix_sum / (self.gt_size - 1 + EPS)
         return em
 
     def generate_parts_numel_combinations(
@@ -509,8 +478,8 @@ class Emeasure(object):
 
         :return: dict(em=dict(adp=adaptive_em, curve=changeable_em))
         """
-        adaptive_em = np.mean(np.array(self.adaptive_ems, dtype=_TYPE))
-        changeable_em = np.mean(np.array(self.changeable_ems, dtype=_TYPE), axis=0)
+        adaptive_em = np.mean(np.array(self.adaptive_ems, dtype=TYPE))
+        changeable_em = np.mean(np.array(self.changeable_ems, dtype=TYPE), axis=0)
         return dict(em=dict(adp=adaptive_em, curve=changeable_em))
 
 
@@ -535,7 +504,7 @@ class WeightedFmeasure(object):
         self.weighted_fms = []
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
-        pred, gt = _prepare_data(pred=pred, gt=gt)
+        pred, gt = prepare_data(pred=pred, gt=gt)
 
         if np.all(~gt):
             wfm = 0
@@ -582,10 +551,10 @@ class WeightedFmeasure(object):
         # P = TPw./(eps+TPw+FPw); %Weighted Precision
         # 注意这里使用mask索引矩阵的时候不可使用Ew[gt]，这实际上仅在索引Ew的0维度
         R = 1 - np.mean(Ew[gt == 1])
-        P = TPw / (TPw + FPw + _EPS)
+        P = TPw / (TPw + FPw + EPS)
 
         # % Q = (1+Beta^2)*(R*P)./(eps+R+(Beta.*P));
-        Q = (1 + self.beta) * R * P / (R + self.beta * P + _EPS)
+        Q = (1 + self.beta) * R * P / (R + self.beta * P + EPS)
 
         return Q
 
@@ -609,5 +578,5 @@ class WeightedFmeasure(object):
 
         :return: dict(wfm=weighted_fm)
         """
-        weighted_fm = np.mean(np.array(self.weighted_fms, dtype=_TYPE))
+        weighted_fm = np.mean(np.array(self.weighted_fms, dtype=TYPE))
         return dict(wfm=weighted_fm)
