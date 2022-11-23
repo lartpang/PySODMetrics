@@ -19,7 +19,7 @@ EM = py_sod_metrics.Emeasure()
 MAE = py_sod_metrics.MAE()
 FMv2 = py_sod_metrics.FmeasureV2(
     metric_handlers=[
-        py_sod_metrics.FmeausreHandler(with_adaptive=True, with_dynamic=True),
+        py_sod_metrics.FmeasureHandler(with_adaptive=True, with_dynamic=True),
         py_sod_metrics.PrecisionHandler(with_adaptive=True, with_dynamic=True),
         py_sod_metrics.RecallHandler(with_adaptive=True, with_dynamic=True),
         py_sod_metrics.SpecificityHandler(with_adaptive=True, with_dynamic=True),

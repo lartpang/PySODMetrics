@@ -41,17 +41,18 @@ matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; m
 
 ## Usage
 
-### Download the file as your script
+### ~~Download the file as your script~~ (Not Recommended)
 
 ```shell script
 wget -nc -O metrics.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/py_sod_metrics/sod_metrics.py
+wget -nc -O utils.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/py_sod_metrics/utils.py
 # maybe, you need:
 pip install -r requirements.txt
 ```
 
 NOTE: `-nc`: If the file 'metrics.py' already exists, it cannot be retrieved.
 
-### Install it as a python package.
+### Install it as a python package. (Recommended)
 
 ```shell script
 pip install pysodmetrics

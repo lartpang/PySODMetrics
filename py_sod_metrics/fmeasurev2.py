@@ -74,7 +74,7 @@ class RecallHandler:
         return np.divide(numerator, denominator, where=denominator != 0, dtype=TYPE)
 
 
-class FmeausreHandler:
+class FmeasureHandler:
     name = "fmeasure"
 
     def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True, beta: float = 0.3):
@@ -103,12 +103,12 @@ class FmeasureV2:
         Args:
             metric_handlers (list, optional): Handlers of different metrics. Defaults to None.
         """
-        self._metric_handlers = metric_handlers
+        self._metric_handlers = metric_handlers if metric_handlers else []
 
     def add_handler(self, metric_handler):
         self._metric_handlers.append(metric_handler)
 
-    def adaptively_binarizing(self, pred: np.ndarray, gt: np.ndarray, FG: int, BG: int) -> float:
+    def adaptively_binarizing(self, pred: np.ndarray, gt: np.ndarray, FG: int, BG: int) -> tuple:
         """Calculate the TP, FP, TN and FN based a adaptive threshold.
 
         Args:

@@ -2,7 +2,7 @@
 from py_sod_metrics.fmeasurev2 import (
     DICEHandler,
     FmeasureV2,
-    FmeausreHandler,
+    FmeasureHandler,
     IOUHandler,
     PrecisionHandler,
     RecallHandler,
