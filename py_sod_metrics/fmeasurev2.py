@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-from .utils import TYPE, get_adaptive_threshold, prepare_data
+from .utils import get_adaptive_threshold, prepare_data, TYPE
 
 
 class IOUHandler:
@@ -14,8 +14,9 @@ class IOUHandler:
     def __call__(self, tp, fp, tn, fn):
         # ious = np.where(Ps + FNs == 0, 0, TPs / (Ps + FNs))
         numerator = tp
-        denominator = tp + fp + fn
-        return np.divide(numerator, denominator, where=denominator != 0, dtype=TYPE)
+        denominator = np.array(tp + fp + fn, dtype=TYPE)
+        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
+        return denominator
 
 
 class SpecificityHandler:
@@ -28,8 +29,9 @@ class SpecificityHandler:
     def __call__(self, tp, fp, tn, fn):
         # specificities = np.where(TNs + FPs == 0, 0, TNs / (TNs + FPs))
         numerator = tn
-        denominator = tn + fp
-        return np.divide(numerator, denominator, where=denominator != 0, dtype=TYPE)
+        denominator = np.array(tn + fp, dtype=TYPE)
+        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
+        return denominator
 
 
 class DICEHandler:
@@ -42,8 +44,9 @@ class DICEHandler:
     def __call__(self, tp, fp, tn, fn):
         # dices = np.where(TPs + FPs == 0, 0, 2 * TPs / (T + Ps))
         numerator = 2 * tp
-        denominator = tp + fn + tp + fp
-        return np.divide(numerator, denominator, where=denominator != 0, dtype=TYPE)
+        denominator = np.array(tp + fn + tp + fp, dtype=TYPE)
+        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
+        return denominator
 
 
 class PrecisionHandler:
@@ -56,8 +59,9 @@ class PrecisionHandler:
     def __call__(self, tp, fp, tn, fn):
         # precisions = np.where(Ps == 0, 0, TPs / Ps)
         numerator = tp
-        denominator = tp + fp
-        return np.divide(numerator, denominator, where=denominator != 0, dtype=TYPE)
+        denominator = np.array(tp + fp, dtype=TYPE)
+        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
+        return denominator
 
 
 class RecallHandler:
@@ -70,8 +74,9 @@ class RecallHandler:
     def __call__(self, tp, fp, tn, fn):
         # recalls = np.where(TPs == 0, 0, TPs / T)
         numerator = tp
-        denominator = tp + fn
-        return np.divide(numerator, denominator, where=denominator != 0, dtype=TYPE)
+        denominator = np.array(tp + fn, dtype=TYPE)
+        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
+        return denominator
 
 
 class FmeasureHandler:
@@ -92,8 +97,9 @@ class FmeasureHandler:
         p = self.precision(tp, fp, tn, fn)
         r = self.recall(tp, fp, tn, fn)
         numerator = (self.beta + 1) * p * r
-        denominator = self.beta * p + r
-        return np.divide(numerator, denominator, where=denominator != 0, dtype=TYPE)
+        denominator = np.array(self.beta * p + r, dtype=TYPE)
+        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
+        return denominator
 
 
 class FmeasureV2:

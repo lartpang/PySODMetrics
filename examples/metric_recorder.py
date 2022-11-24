@@ -37,14 +37,6 @@ INDIVADUAL_METRIC_MAPPING = {
     "sm": py_sod_metrics.Smeasure,
     "wfm": py_sod_metrics.WeightedFmeasure,
 }
-BINARY_CLASSIFICATION_METRIC_MAPPING = {
-    "fmeasure": py_sod_metrics.FmeasureHandler(with_dynamic=True, with_adaptive=True, beta=0.3),
-    "precision": py_sod_metrics.PrecisionHandler(with_dynamic=False, with_adaptive=False),  # close
-    "recall": py_sod_metrics.RecallHandler(with_dynamic=False, with_adaptive=False),  # close
-    "iou": py_sod_metrics.IOUHandler(with_dynamic=True, with_adaptive=True),
-    "dice": py_sod_metrics.DICEHandler(with_dynamic=True, with_adaptive=True),
-    "specificity": py_sod_metrics.SpecificityHandler(with_dynamic=True, with_adaptive=True),
-}
 
 
 class CalTotalMetricV1:
@@ -110,6 +102,34 @@ class CalTotalMetricV1:
         return {"sequential": sequential_results, "numerical": numerical_results}
 
 
+BINARY_CLASSIFICATION_METRIC_MAPPING = {
+    "fmeasure": {
+        "handler": py_sod_metrics.FmeasureHandler,
+        "kwargs": dict(with_dynamic=True, with_adaptive=True, beta=0.3),
+    },
+    "precision": {
+        "handler": py_sod_metrics.PrecisionHandler,
+        "kwargs": dict(with_dynamic=True, with_adaptive=False),
+    },
+    "recall": {
+        "handler": py_sod_metrics.RecallHandler,
+        "kwargs": dict(with_dynamic=True, with_adaptive=False),
+    },
+    "iou": {
+        "handler": py_sod_metrics.IOUHandler,
+        "kwargs": dict(with_dynamic=True, with_adaptive=True),
+    },
+    "dice": {
+        "handler": py_sod_metrics.DICEHandler,
+        "kwargs": dict(with_dynamic=True, with_adaptive=True),
+    },
+    "specificity": {
+        "handler": py_sod_metrics.SpecificityHandler,
+        "kwargs": dict(with_dynamic=True, with_adaptive=True),
+    },
+}
+
+
 class CalTotalMetricV2:
     # 'fm' is replaced by 'fmeasure' in BINARY_CLASSIFICATION_METRIC_MAPPING
     suppoted_metrics = ["mae", "em", "sm", "wfm"] + sorted(
@@ -132,11 +152,14 @@ class CalTotalMetricV2:
             if metric_name in INDIVADUAL_METRIC_MAPPING:
                 self.metric_objs[metric_name] = INDIVADUAL_METRIC_MAPPING[metric_name]()
             else:  # metric_name in BINARY_CLASSIFICATION_METRIC_MAPPING
-                if not has_existed:
+                if not has_existed:  # only init once
                     self.metric_objs["fmeasurev2"] = py_sod_metrics.FmeasureV2()
                     has_existed = True
-                handler = BINARY_CLASSIFICATION_METRIC_MAPPING[metric_name]
-                self.metric_objs["fmeasurev2"].add_handler(handler)
+                metric_handler = BINARY_CLASSIFICATION_METRIC_MAPPING[metric_name]
+                self.metric_objs["fmeasurev2"].add_handler(
+                    # instantiate inside the class instead of outside the class
+                    metric_handler["handler"](**metric_handler["kwargs"])
+                )
 
     def update(self, pre: np.ndarray, gt: np.ndarray):
         assert pre.shape == gt.shape, (pre.shape, gt.shape)
@@ -194,7 +217,7 @@ if __name__ == "__main__":
     data_loader = ...
     model = ...
 
-    cal_total_seg_metrics = CalTotalMetric()
+    cal_total_seg_metrics = CalTotalMetricV1()
     for batch in data_loader:
         seg_preds = model(batch)
         for seg_pred in seg_preds:
