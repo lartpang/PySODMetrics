@@ -7,6 +7,7 @@ from py_sod_metrics.fmeasurev2 import (
     PrecisionHandler,
     RecallHandler,
     SpecificityHandler,
+    BERHandler,
 )
 from py_sod_metrics.sod_metrics import (
     MAE,

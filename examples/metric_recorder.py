@@ -127,6 +127,10 @@ BINARY_CLASSIFICATION_METRIC_MAPPING = {
         "handler": py_sod_metrics.SpecificityHandler,
         "kwargs": dict(with_dynamic=True, with_adaptive=True),
     },
+    "ber": {
+        "handler": py_sod_metrics.BERHandler,
+        "kwargs": dict(with_dynamic=True, with_adaptive=True),
+    }
 }
 
 

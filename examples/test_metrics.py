@@ -25,6 +25,7 @@ FMv2 = py_sod_metrics.FmeasureV2(
         py_sod_metrics.SpecificityHandler(with_adaptive=True, with_dynamic=True),
         py_sod_metrics.IOUHandler(with_adaptive=True, with_dynamic=True),
         py_sod_metrics.DICEHandler(with_adaptive=True, with_dynamic=True),
+        py_sod_metrics.BERHandler(with_adaptive=True, with_dynamic=True),
     ]
 )
 
@@ -57,6 +58,7 @@ recall = fmv2["recall"]
 specificity = fmv2["specificity"]
 iou = fmv2["iou"]
 dice = fmv2["dice"]
+ber = fmv2["ber"]
 
 results = {
     "Smeasure": sm,
@@ -68,6 +70,7 @@ results = {
     "adpFm": fm["adp"],
     "meanFm": fm["curve"].mean(),
     "maxFm": fm["curve"].max(),
+    #
     "adpfm2": fmeasure["adaptive"],
     "meanfm2": fmeasure["dynamic"].mean(),
     "maxfm2": fmeasure["dynamic"].max(),
@@ -86,6 +89,9 @@ results = {
     "adpdicev2": dice["adaptive"],
     "meandicev2": dice["dynamic"].mean(),
     "maxdicev2": dice["dynamic"].max(),
+    "adpberv2": ber["adaptive"],
+    "meanberv2": ber["dynamic"].mean(),
+    "maxberv2": ber["dynamic"].max(),
 }
 
 default_results = {
@@ -116,6 +122,7 @@ default_results = {
         "Smeasure": 0.9029761578759272,
         "adpEm": 0.9408760066970617,
         "adpFm": 0.5816750824038355,
+        "adpberv2": 0.2354784689008184,
         "adpdicev2": 0.5801020564379223,
         "adpfm2": 0.5816750824038355,
         "adpiouv2": 0.5141023436626048,
@@ -124,6 +131,7 @@ default_results = {
         "adpspecv2": 0.9512882075256152,
         "maxEm": 0.9669544828922699,
         "maxFm": 0.5886784581120638,
+        "maxberv2": 0.6666666666666666,
         "maxdicev2": 0.5830613926289557,
         "maxfm2": 0.5886784581120638,
         "maxiouv2": 0.5201569938888494,
@@ -132,6 +140,7 @@ default_results = {
         "maxspecv2": 0.9965927890353435,
         "meanEm": 0.9566258293508704,
         "meanFm": 0.577051059518767,
+        "meanberv2": 0.23290802950995626,
         "meandicev2": 0.5689913551800527,
         "meanfm2": 0.577051059518767,
         "meaniouv2": 0.49816648786971,
@@ -143,4 +152,5 @@ default_results = {
 }
 
 pprint(results)
+print("Difference: ")
 pprint({k: default_value - results[k] for k, default_value in default_results["v1_4_0"].items()})

@@ -5,9 +5,20 @@ from .utils import get_adaptive_threshold, prepare_data, TYPE
 
 
 class IOUHandler:
+    """Intersection over Union
+
+    iou = tp / (tp + fp + fn)
+    """
+
     name = "iou"
 
     def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
+        """Handler for IoU.
+
+        Args:
+            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
+            with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+        """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
 
@@ -20,9 +31,19 @@ class IOUHandler:
 
 
 class SpecificityHandler:
+    """Specificity
+
+    specificity = tn / (tn + fp)
+    """
     name = "specificity"
 
     def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
+        """Handler for Specificity.
+
+        Args:
+            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
+            with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+        """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
 
@@ -35,9 +56,19 @@ class SpecificityHandler:
 
 
 class DICEHandler:
+    """DICE
+
+    dice = 2 * tp / (tp + fn + tp + fp)
+    """
     name = "dice"
 
     def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
+        """Handler for DICE.
+
+        Args:
+            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
+            with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+        """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
 
@@ -50,9 +81,19 @@ class DICEHandler:
 
 
 class PrecisionHandler:
+    """Precision
+
+    precision = tp / (tp + fp)
+    """
     name = "precision"
 
     def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
+        """Handler for Precision.
+
+        Args:
+            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
+            with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+        """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
 
@@ -65,9 +106,20 @@ class PrecisionHandler:
 
 
 class RecallHandler:
+    """Recall
+
+    recall = tp / (tp + fn)
+    """
+
     name = "recall"
 
     def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
+        """Handler for Recall.
+
+        Args:
+            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
+            with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+        """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
 
@@ -79,10 +131,47 @@ class RecallHandler:
         return denominator
 
 
+class BERHandler:
+    """Balance Error Rate
+
+    ber = 1 - 0.5 * (tp / (tp + fn) + tn / (tn + fp))
+    """
+
+    name = "ber"
+
+    def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
+        """Handler for BER.
+
+        Args:
+            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
+            with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+        """
+        self.dynamic_results = [] if with_dynamic else None
+        self.adaptive_results = [] if with_adaptive else None
+
+    def __call__(self, tp, fp, tn, fn):
+        fg = np.asarray(tp + fn, dtype=TYPE)
+        bg = np.asarray(tn + fp, dtype=TYPE)
+        np.divide(tp, fg, out=fg, where=fg != 0)
+        np.divide(tn, bg, out=bg, where=bg != 0)
+        return 1 - 0.5 * (fg + bg)
+
+
 class FmeasureHandler:
+    """F-measure
+
+    fmeasure = (beta + 1) * precision * recall / (beta * precision + recall)
+    """
     name = "fmeasure"
 
     def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True, beta: float = 0.3):
+        """Handler for F-measure.
+
+        Args:
+            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
+            with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+            beta (bool, optional): β^2 in F-measure.
+        """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
         self.beta = beta
@@ -104,7 +193,7 @@ class FmeasureHandler:
 
 class FmeasureV2:
     def __init__(self, metric_handlers: list = None):
-        """Enhanced Fmeasure class with more relevant metrics, e.g. precision, recall, specificity, dice, iou, and fmeasure.
+        """Enhanced Fmeasure class with more relevant metrics, e.g. precision, recall, specificity, dice, iou,fmeasure and so on.
 
         Args:
             metric_handlers (list, optional): Handlers of different metrics. Defaults to None.
@@ -166,6 +255,15 @@ class FmeasureV2:
         return TPs, FPs, TNs, FNs
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
+        """Statistics the metrics for the pair of pred and gt.
+
+        Args:
+            pred (np.ndarray): Prediction, gray scale image.
+            gt (np.ndarray): Ground truth, gray scale image.
+
+        Raises:
+            ValueError: Please add your metric handler before using `step()`.
+        """
         if not self._metric_handlers:  # 没有添加metric_handler
             raise ValueError("Please add your metric handler before using `step()`.")
 
