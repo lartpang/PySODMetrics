@@ -193,7 +193,7 @@ class FmeasureHandler:
 
 class FmeasureV2:
     def __init__(self, metric_handlers: list = None):
-        """Enhanced Fmeasure class with more relevant metrics, e.g. precision, recall, specificity, dice, iou,fmeasure and so on.
+        """Enhanced Fmeasure class with more relevant metrics, e.g. precision, recall, specificity, dice, iou, fmeasure and so on.
 
         Args:
             metric_handlers (list, optional): Handlers of different metrics. Defaults to None.

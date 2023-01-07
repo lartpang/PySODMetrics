@@ -1,7 +1,14 @@
-<p align="center">
-  <img src="./images/logo.png" alt="Logo" width="320" height="auto">
-  <h2 align="center">PySODMetrics: 一份简单有效的SOD指标实现</h2>
-</p>
+<div align="center">
+  <img src="https://github.com/lartpang/PySODMetrics/blob/main/images/logo.png?raw=true" alt="Logo" width="320" height="auto">
+  </br>
+  <h2>PySODMetrics: 一份简单有效的SOD指标实现</h2>
+  <a href="./readme.md"><img src="https://img.shields.io/badge/README-English-blue"></a>
+  <img src="https://img.shields.io/pypi/v/pysodmetrics">
+  <img src="https://img.shields.io/pypi/dm/pysodmetrics?label=pypi%20downloads&logo=PyPI&logoColor=white">
+  <img src="https://img.shields.io/github/last-commit/lartpang/PySODMetrics">
+  <img src="https://img.shields.io/github/last-commit/lartpang/PySODMetrics">
+  <img src="https://img.shields.io/github/release-date/lartpang/PySODMetrics">
+</div>
 
 ## 介绍
 
@@ -18,7 +25,7 @@
 
 - A Python-based salient object detection and video object segmentation evaluation toolbox. <https://github.com/lartpang/Py-SOD-VOS-EvalToolkit>
 
-## 与范的 Matlab 代码的比较 <https://github.com/DengPingFan/CODToolbox>
+## 与[范的 Matlab 代码](https://github.com/DengPingFan/CODToolbox)的比较
 
 在我们的测试中 (测试代码可见`test`文件夹下内容)，结果与 Fan 的代码一致，如下:
 
@@ -29,21 +36,14 @@ matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; m
 
 **注意**
 
-- 此处基于的 matlab 代码需要将<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102> 的`Bi_sal(sal>threshold)=1;`改为` Bi_sal(sal>=threshold)=1;`。相关讨论见：<https://github.com/DengPingFan/CODToolbox/issues/1>
-- 2021-12-20 (Version `1.3.0`)：由于 numpy 和 matlab 的不同，在 `1.2.x` 版本中，matlab 代码的结果与我们的结果在某些指标上存在非常细微的差异。最近的 PR (https://github.com/lartpang/PySODMetrics/pull/3) 缓解了这个问题。但是，在 E-measure 上仍然存在非常小的差异。大多数论文中的结果都四舍五入到三四位有效数字，因此，新版本与“1.2.x”版本之间没有明显差异。
+- matlab 代码需要将<https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102> 的`Bi_sal(sal>threshold)=1;`改为` Bi_sal(sal>=threshold)=1;`。细节可见 [相关讨论](https://github.com/DengPingFan/CODToolbox/issues/1)。
+- 2021-12-20 (Version `1.3.0`)：由于 numpy 和 matlab 的不同，在 `1.2.x` 版本中，matlab 代码的结果与我们的结果在某些指标上存在非常细微的差异。[最近的 PR](https://github.com/lartpang/PySODMetrics/pull/3) 缓解了这个问题。但是，在 E-measure 上仍然存在非常小的差异。大多数论文中的结果都四舍五入到三四位有效数字，因此，新版本与“1.2.x”版本之间没有明显差异。
 
 ## 使用
 
 ### ~~下载文件为自己的脚本~~
 
-```shell script
-wget -nc -O metrics.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/py_sod_metrics/sod_metrics.py
-wget -nc -O utils.py https://raw.githubusercontent.com/lartpang/PySODMetrics/main/py_sod_metrics/utils.py
-# 或许你还需要：
-pip install -r requirements.txt
-```
-
-注意：`-nc`: 如果文件存在，就不会下载
+核心文件在文件夹 `py_sod_metrics` 中。
 
 ### 安装成一个包
 
