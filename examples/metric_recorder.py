@@ -105,31 +105,31 @@ class CalTotalMetricV1:
 BINARY_CLASSIFICATION_METRIC_MAPPING = {
     "fmeasure": {
         "handler": py_sod_metrics.FmeasureHandler,
-        "kwargs": dict(with_dynamic=True, with_adaptive=True, beta=0.3),
+        "kwargs": dict(with_dynamic=True, with_adaptive=True, with_binary=True, beta=0.3),
     },
     "precision": {
         "handler": py_sod_metrics.PrecisionHandler,
-        "kwargs": dict(with_dynamic=True, with_adaptive=False),
+        "kwargs": dict(with_dynamic=True, with_adaptive=False, with_binary=False),
     },
     "recall": {
         "handler": py_sod_metrics.RecallHandler,
-        "kwargs": dict(with_dynamic=True, with_adaptive=False),
+        "kwargs": dict(with_dynamic=True, with_adaptive=False, with_binary=False),
     },
     "iou": {
         "handler": py_sod_metrics.IOUHandler,
-        "kwargs": dict(with_dynamic=True, with_adaptive=True),
+        "kwargs": dict(with_dynamic=True, with_adaptive=True, with_binary=True),
     },
     "dice": {
         "handler": py_sod_metrics.DICEHandler,
-        "kwargs": dict(with_dynamic=True, with_adaptive=True),
+        "kwargs": dict(with_dynamic=True, with_adaptive=True, with_binary=True),
     },
     "specificity": {
         "handler": py_sod_metrics.SpecificityHandler,
-        "kwargs": dict(with_dynamic=True, with_adaptive=True),
+        "kwargs": dict(with_dynamic=True, with_adaptive=True, with_binary=True),
     },
     "ber": {
         "handler": py_sod_metrics.BERHandler,
-        "kwargs": dict(with_dynamic=True, with_adaptive=True),
+        "kwargs": dict(with_dynamic=True, with_adaptive=True, with_binary=True),
     }
 }
 
@@ -187,12 +187,15 @@ class CalTotalMetricV2:
                 for _name, results in info.items():
                     dynamic_results = results.get("dynamic")
                     adaptive_results = results.get("adaptive")
+                    binary_results = results.get('binary')
                     if dynamic_results is not None:
                         sequential_results[_name] = np.flip(dynamic_results)
                         numerical_results[f"max{_name}"] = dynamic_results.max()
                         numerical_results[f"avg{_name}"] = dynamic_results.mean()
                     if adaptive_results is not None:
                         numerical_results[f"adp{_name}"] = adaptive_results
+                    if binary_results is not None:
+                        numerical_results[f"bi{_name}"] = binary_results
             else:
                 results = info[m_name]
                 if m_name in ("wfm", "sm", "mae"):

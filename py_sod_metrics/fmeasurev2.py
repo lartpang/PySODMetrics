@@ -12,15 +12,18 @@ class IOUHandler:
 
     name = "iou"
 
-    def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
-        """Handler for IoU.
-
+    def __init__(
+        self, with_dynamic: bool = True, with_adaptive: bool = True, with_binary: bool = False
+    ):
+        """
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
             with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+            with_binary (bool, optional): Record binary results for binary version. Defaults to False.
         """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
+        self.binary_results = [] if with_binary else None
 
     def __call__(self, tp, fp, tn, fn):
         # ious = np.where(Ps + FNs == 0, 0, TPs / (Ps + FNs))
@@ -35,17 +38,21 @@ class SpecificityHandler:
 
     specificity = tn / (tn + fp)
     """
+
     name = "specificity"
 
-    def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
-        """Handler for Specificity.
-
+    def __init__(
+        self, with_dynamic: bool = True, with_adaptive: bool = True, with_binary: bool = False
+    ):
+        """
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
             with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+            with_binary (bool, optional): Record binary results for binary version. Defaults to False.
         """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
+        self.binary_results = [] if with_binary else None
 
     def __call__(self, tp, fp, tn, fn):
         # specificities = np.where(TNs + FPs == 0, 0, TNs / (TNs + FPs))
@@ -60,17 +67,21 @@ class DICEHandler:
 
     dice = 2 * tp / (tp + fn + tp + fp)
     """
+
     name = "dice"
 
-    def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
-        """Handler for DICE.
-
+    def __init__(
+        self, with_dynamic: bool = True, with_adaptive: bool = True, with_binary: bool = False
+    ):
+        """
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
             with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+            with_binary (bool, optional): Record binary results for binary version. Defaults to False.
         """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
+        self.binary_results = [] if with_binary else None
 
     def __call__(self, tp, fp, tn, fn):
         # dices = np.where(TPs + FPs == 0, 0, 2 * TPs / (T + Ps))
@@ -85,17 +96,21 @@ class PrecisionHandler:
 
     precision = tp / (tp + fp)
     """
+
     name = "precision"
 
-    def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
-        """Handler for Precision.
-
+    def __init__(
+        self, with_dynamic: bool = True, with_adaptive: bool = True, with_binary: bool = False
+    ):
+        """
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
             with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+            with_binary (bool, optional): Record binary results for binary version. Defaults to False.
         """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
+        self.binary_results = [] if with_binary else None
 
     def __call__(self, tp, fp, tn, fn):
         # precisions = np.where(Ps == 0, 0, TPs / Ps)
@@ -113,15 +128,18 @@ class RecallHandler:
 
     name = "recall"
 
-    def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
-        """Handler for Recall.
-
+    def __init__(
+        self, with_dynamic: bool = True, with_adaptive: bool = True, with_binary: bool = False
+    ):
+        """
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
             with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+            with_binary (bool, optional): Record binary results for binary version. Defaults to False.
         """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
+        self.binary_results = [] if with_binary else None
 
     def __call__(self, tp, fp, tn, fn):
         # recalls = np.where(TPs == 0, 0, TPs / T)
@@ -139,15 +157,18 @@ class BERHandler:
 
     name = "ber"
 
-    def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True):
-        """Handler for BER.
-
+    def __init__(
+        self, with_dynamic: bool = True, with_adaptive: bool = True, with_binary: bool = False
+    ):
+        """
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
             with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+            with_binary (bool, optional): Record binary results for binary version. Defaults to False.
         """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
+        self.binary_results = [] if with_binary else None
 
     def __call__(self, tp, fp, tn, fn):
         fg = np.asarray(tp + fn, dtype=TYPE)
@@ -162,18 +183,26 @@ class FmeasureHandler:
 
     fmeasure = (beta + 1) * precision * recall / (beta * precision + recall)
     """
+
     name = "fmeasure"
 
-    def __init__(self, with_dynamic: bool = True, with_adaptive: bool = True, beta: float = 0.3):
-        """Handler for F-measure.
-
+    def __init__(
+        self,
+        with_dynamic: bool = True,
+        with_adaptive: bool = True,
+        with_binary: bool = False,
+        beta: float = 0.3,
+    ):
+        """
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions. Defaults to True.
             with_adaptive (bool, optional): Record adaptive results for adp version. Defaults to True.
+            with_binary (bool, optional): Record binary results for binary version. Defaults to False.
             beta (bool, optional): β^2 in F-measure.
         """
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
+        self.binary_results = [] if with_binary else None
         self.beta = beta
         self.precision = PrecisionHandler(False, False)
         self.recall = RecallHandler(False, False)
@@ -203,6 +232,29 @@ class FmeasureV2:
     def add_handler(self, metric_handler):
         self._metric_handlers.append(metric_handler)
 
+    @staticmethod
+    def threshold_binarizing(
+        threshold: float, pred: np.ndarray, gt: np.ndarray, FG: int, BG: int
+    ) -> tuple:
+        """Calculate the TP, FP, TN and FN based a adaptive threshold.
+
+        Args:
+            threshold (float): threshold for binarize `pred`
+            pred (np.ndarray): prediction normalized in [0, 1]
+            gt (np.ndarray): gt binarized by 128
+            FG (int): the number of foreground pixels in gt
+            BG (int): the number of background pixels in gt
+
+        Returns:
+            dict: TP, FP, TN, FN
+        """
+        binary_predcition = pred >= threshold
+        TP = np.count_nonzero(binary_predcition[gt])
+        FP = np.count_nonzero(binary_predcition[~gt])
+        FN = FG - TP
+        TN = BG - FP
+        return {"tp": TP, "fp": FP, "tn": TN, "fn": FN}
+
     def adaptively_binarizing(self, pred: np.ndarray, gt: np.ndarray, FG: int, BG: int) -> tuple:
         """Calculate the TP, FP, TN and FN based a adaptive threshold.
 
@@ -213,16 +265,10 @@ class FmeasureV2:
             BG (int): the number of background pixels in gt
 
         Returns:
-            float: TP, FP, TN, FN
+            dict: TP, FP, TN, FN
         """
-        # ``np.count_nonzero`` is faster and better
         adaptive_threshold = get_adaptive_threshold(pred, max_value=1)
-        binary_predcition = pred >= adaptive_threshold
-        TP = np.count_nonzero(binary_predcition[gt])
-        FP = np.count_nonzero(binary_predcition[~gt])
-        FN = FG - TP
-        TN = BG - FP
-        return TP, FP, TN, FN
+        return self.threshold_binarizing(adaptive_threshold, pred, gt, FG, BG)
 
     def dynamically_binarizing(self, pred: np.ndarray, gt: np.ndarray, FG: int, BG: int) -> tuple:
         """Calculate the corresponding TP, FP, TN and FNs when the threshold changes from 0 to 255.
@@ -234,7 +280,7 @@ class FmeasureV2:
             BG (int): the number of background pixels in gt
 
         Returns:
-            tuple: TPs, FPs, TNs, FNs
+            dict: TPs, FPs, TNs, FNs
         """
         # 1. 获取预测结果在真值前背景区域中的直方图
         pred: np.ndarray = (pred * 255).astype(np.uint8)
@@ -252,7 +298,7 @@ class FmeasureV2:
         FPs = fp_w_thrs  # 背景 预测为 前景
         FNs = FG - TPs  # 前景 预测为 背景
         TNs = BG - FPs  # 背景 预测为 背景
-        return TPs, FPs, TNs, FNs
+        return {"tp": TPs, "fp": FPs, "tn": TNs, "fn": FNs}
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
         """Statistics the metrics for the pair of pred and gt.
@@ -271,14 +317,29 @@ class FmeasureV2:
 
         FG = np.count_nonzero(gt)  # 真实前景, FG=(TPs+FNs)
         BG = gt.size - FG  # 真实背景, BG=(TNs+FPs)
-        TPs, FPs, TNs, FNs = self.dynamically_binarizing(pred=pred, gt=gt, FG=FG, BG=BG)
-        TP, FP, TN, FN = self.adaptively_binarizing(pred=pred, gt=gt, FG=FG, BG=BG)
 
+        dynamical_tpfptnfn = None
+        adaptive_tpfptnfn = None
+        binary_tpfptnfn = None
         for handler in self._metric_handlers:
             if handler.dynamic_results is not None:
-                handler.dynamic_results.append(handler(tp=TPs, fp=FPs, tn=TNs, fn=FNs))
+                if dynamical_tpfptnfn is None:
+                    dynamical_tpfptnfn = self.dynamically_binarizing(
+                        pred=pred, gt=gt, FG=FG, BG=BG
+                    )
+                handler.dynamic_results.append(handler(**dynamical_tpfptnfn))
+
             if handler.adaptive_results is not None:
-                handler.adaptive_results.append(handler(tp=TP, fp=FP, tn=TN, fn=FN))
+                if adaptive_tpfptnfn is None:
+                    adaptive_tpfptnfn = self.adaptively_binarizing(pred=pred, gt=gt, FG=FG, BG=BG)
+                handler.adaptive_results.append(handler(**adaptive_tpfptnfn))
+
+            if handler.binary_results is not None:
+                if binary_tpfptnfn is None:
+                    binary_tpfptnfn = self.threshold_binarizing(
+                        threshold=0.5, pred=pred, gt=gt, FG=FG, BG=BG
+                    )
+                handler.binary_results.append(handler(**binary_tpfptnfn))
 
     def get_results(self) -> dict:
         """Return the results of the specific metric names.
@@ -293,5 +354,7 @@ class FmeasureV2:
                 res["dynamic"] = np.mean(np.array(handler.dynamic_results, dtype=TYPE), axis=0)
             if handler.adaptive_results is not None:
                 res["adaptive"] = np.mean(np.array(handler.adaptive_results, dtype=TYPE))
+            if handler.binary_results is not None:
+                res["binary"] = np.mean(np.array(handler.binary_results, dtype=TYPE))
             results[handler.name] = res
         return results
