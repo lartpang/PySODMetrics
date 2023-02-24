@@ -103,7 +103,6 @@ class KappaHandler(_BaseHandler):
         *,
         with_binary: bool = False,
         sample_based: bool = True,
-        beta: float = 0.3,
     ):
         """
         Args:
@@ -112,7 +111,6 @@ class KappaHandler(_BaseHandler):
             with_binary (bool, optional): Record binary results for binary version.
             sample_based (bool, optional): Whether to average the metric of each sample or calculate
                 the metric of the dataset. Defaults to True.
-            beta (bool, optional): β^2 in F-measure. Defaults to 0.3.
         """
         super().__init__(
             with_dynamic=with_dynamic,
@@ -121,7 +119,6 @@ class KappaHandler(_BaseHandler):
             sample_based=sample_based,
         )
 
-        self.beta = beta
         self.oa = OverallAccuracyHandler(False, False)
 
     def __call__(self, tp, fp, tn, fn):
