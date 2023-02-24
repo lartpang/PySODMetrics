@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from py_sod_metrics.fmeasurev2 import (
+    BERHandler,
     DICEHandler,
-    FmeasureV2,
     FmeasureHandler,
+    FmeasureV2,
     IOUHandler,
+    KappaHandler,
+    OverallAccuracyHandler,
     PrecisionHandler,
     RecallHandler,
     SpecificityHandler,
-    BERHandler,
 )
 from py_sod_metrics.sod_metrics import (
     MAE,

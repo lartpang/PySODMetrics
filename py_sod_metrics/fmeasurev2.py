@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+import abc
+
 import numpy as np
 
-from .utils import get_adaptive_threshold, prepare_data, TYPE
-import abc
+from .utils import TYPE, get_adaptive_threshold, prepare_data
 
 
 class _BaseHandler:
@@ -37,6 +38,12 @@ class _BaseHandler:
     def __call__(self, *args, **kwds):
         pass
 
+    @staticmethod
+    def divide(numerator, denominator):
+        denominator = np.array(denominator, dtype=TYPE)
+        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
+        return denominator
+
 
 class IOUHandler(_BaseHandler):
     """Intersection over Union
@@ -46,10 +53,7 @@ class IOUHandler(_BaseHandler):
 
     def __call__(self, tp, fp, tn, fn):
         # ious = np.where(Ps + FNs == 0, 0, TPs / (Ps + FNs))
-        numerator = tp
-        denominator = np.array(tp + fp + fn, dtype=TYPE)
-        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
-        return denominator
+        return self.divide(tp, tp + fp + fn)
 
 
 class SpecificityHandler(_BaseHandler):
@@ -60,10 +64,7 @@ class SpecificityHandler(_BaseHandler):
 
     def __call__(self, tp, fp, tn, fn):
         # specificities = np.where(TNs + FPs == 0, 0, TNs / (TNs + FPs))
-        numerator = tn
-        denominator = np.array(tn + fp, dtype=TYPE)
-        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
-        return denominator
+        return self.divide(tn, tn + fp)
 
 
 class DICEHandler(_BaseHandler):
@@ -74,10 +75,62 @@ class DICEHandler(_BaseHandler):
 
     def __call__(self, tp, fp, tn, fn):
         # dices = np.where(TPs + FPs == 0, 0, 2 * TPs / (T + Ps))
-        numerator = 2 * tp
-        denominator = np.array(tp + fn + tp + fp, dtype=TYPE)
-        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
-        return denominator
+        return self.divide(2 * tp, tp + fn + tp + fp)
+
+
+class OverallAccuracyHandler(_BaseHandler):
+    """OverallAccuracy
+
+    oa = overall_accuracy = (tp + tn) / (tp + fp + tn + fn)
+    """
+
+    def __call__(self, tp, fp, tn, fn):
+        # dices = np.where(TPs + FPs == 0, 0, 2 * TPs / (T + Ps))
+        return self.divide(tp + tn, tp + fp + tn + fn)
+
+
+class KappaHandler(_BaseHandler):
+    """KappaAccuracy
+
+    kappa = kappa = (oa - p_) / (1 - p_)
+    p_ = [(tp + fp)(tp + fn) + (tn + fn)(tn + tp)] / (tp + fp + tn + fn)^2
+    """
+
+    def __init__(
+        self,
+        with_dynamic: bool,
+        with_adaptive: bool,
+        *,
+        with_binary: bool = False,
+        sample_based: bool = True,
+        beta: float = 0.3,
+    ):
+        """
+        Args:
+            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.
+            with_adaptive (bool, optional): Record adaptive results for adp version.
+            with_binary (bool, optional): Record binary results for binary version.
+            sample_based (bool, optional): Whether to average the metric of each sample or calculate
+                the metric of the dataset. Defaults to True.
+            beta (bool, optional): β^2 in F-measure. Defaults to 0.3.
+        """
+        super().__init__(
+            with_dynamic=with_dynamic,
+            with_adaptive=with_adaptive,
+            with_binary=with_binary,
+            sample_based=sample_based,
+        )
+
+        self.beta = beta
+        self.oa = OverallAccuracyHandler(False, False)
+
+    def __call__(self, tp, fp, tn, fn):
+        oa = self.oa(tp, fp, tn, fn)
+        hpy_p = self.divide(
+            (tp + fp) * (tp + fn) + (tn + fn) * (tn + tp),
+            (tp + fp + tn + fn) ** 2,
+        )
+        return self.divide(oa - hpy_p, 1 - hpy_p)
 
 
 class PrecisionHandler(_BaseHandler):
@@ -88,10 +141,7 @@ class PrecisionHandler(_BaseHandler):
 
     def __call__(self, tp, fp, tn, fn):
         # precisions = np.where(Ps == 0, 0, TPs / Ps)
-        numerator = tp
-        denominator = np.array(tp + fp, dtype=TYPE)
-        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
-        return denominator
+        return self.divide(tp, tp + fp)
 
 
 class RecallHandler(_BaseHandler):
@@ -102,10 +152,7 @@ class RecallHandler(_BaseHandler):
 
     def __call__(self, tp, fp, tn, fn):
         # recalls = np.where(TPs == 0, 0, TPs / T)
-        numerator = tp
-        denominator = np.array(tp + fn, dtype=TYPE)
-        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
-        return denominator
+        return self.divide(tp, tp + fn)
 
 
 class BERHandler(_BaseHandler):
@@ -146,7 +193,12 @@ class FmeasureHandler(_BaseHandler):
                 the metric of the dataset. Defaults to True.
             beta (bool, optional): β^2 in F-measure. Defaults to 0.3.
         """
-        super().__init__(with_dynamic=with_dynamic, with_adaptive=with_adaptive, with_binary=with_binary, sample_based=sample_based)
+        super().__init__(
+            with_dynamic=with_dynamic,
+            with_adaptive=with_adaptive,
+            with_binary=with_binary,
+            sample_based=sample_based,
+        )
 
         self.beta = beta
         self.precision = PrecisionHandler(False, False)
@@ -159,10 +211,7 @@ class FmeasureHandler(_BaseHandler):
 
         p = self.precision(tp, fp, tn, fn)
         r = self.recall(tp, fp, tn, fn)
-        numerator = (self.beta + 1) * p * r
-        denominator = np.array(self.beta * p + r, dtype=TYPE)
-        np.divide(numerator, denominator, out=denominator, where=denominator != 0)
-        return denominator
+        return self.divide((self.beta + 1) * p * r, self.beta * p + r)
 
 
 class FmeasureV2:

@@ -104,72 +104,53 @@ class MetricRecorderV1:
         return {"sequential": sequential_results, "numerical": numerical_results}
 
 
+sample_gray = dict(with_adaptive=True, with_dynamic=True)
+sample_bin = dict(with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True)
+overall_bin = dict(with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=False)
 BINARY_CLASSIFICATION_METRIC_MAPPING = {
     # 灰度数据指标
-    "fm": py_sod_metrics.FmeasureHandler(with_adaptive=True, with_dynamic=True, beta=0.3),
-    "f1": py_sod_metrics.FmeasureHandler(with_adaptive=True, with_dynamic=True, beta=0.1),
-    "pre": py_sod_metrics.PrecisionHandler(with_adaptive=True, with_dynamic=True),
-    "rec": py_sod_metrics.RecallHandler(with_adaptive=True, with_dynamic=True),
-    "iou": py_sod_metrics.IOUHandler(with_adaptive=True, with_dynamic=True),
-    "dice": py_sod_metrics.DICEHandler(with_adaptive=True, with_dynamic=True),
-    "spec": py_sod_metrics.SpecificityHandler(with_adaptive=True, with_dynamic=True),
-    "ber": py_sod_metrics.BERHandler(with_adaptive=True, with_dynamic=True),
+    "fm": py_sod_metrics.FmeasureHandler(**sample_gray, beta=0.3),
+    "f1": py_sod_metrics.FmeasureHandler(**sample_gray, beta=0.1),
+    "pre": py_sod_metrics.PrecisionHandler(**sample_gray),
+    "rec": py_sod_metrics.RecallHandler(**sample_gray),
+    "iou": py_sod_metrics.IOUHandler(**sample_gray),
+    "dice": py_sod_metrics.DICEHandler(**sample_gray),
+    "spec": py_sod_metrics.SpecificityHandler(**sample_gray),
+    "ber": py_sod_metrics.BERHandler(**sample_gray),
+    "oa": py_sod_metrics.OverallAccuracyHandler(**sample_gray),
+    "kappa": py_sod_metrics.KappaHandler(**sample_gray),
     # 二值化数据指标的特殊情况一：各个样本独立计算指标后取平均
-    "sample_bifm": py_sod_metrics.FmeasureHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True, beta=0.3
-    ),
-    "sample_bif1": py_sod_metrics.FmeasureHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True, beta=1
-    ),
-    "sample_bipre": py_sod_metrics.PrecisionHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "sample_birec": py_sod_metrics.RecallHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "sample_biiou": py_sod_metrics.IOUHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "sample_bidice": py_sod_metrics.DICEHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "sample_bispec": py_sod_metrics.SpecificityHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "sample_biber": py_sod_metrics.BERHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
+    "sample_bifm": py_sod_metrics.FmeasureHandler(**sample_bin, beta=0.3),
+    "sample_bif1": py_sod_metrics.FmeasureHandler(**sample_bin, beta=1),
+    "sample_bipre": py_sod_metrics.PrecisionHandler(**sample_bin),
+    "sample_birec": py_sod_metrics.RecallHandler(**sample_bin),
+    "sample_biiou": py_sod_metrics.IOUHandler(**sample_bin),
+    "sample_bidice": py_sod_metrics.DICEHandler(**sample_bin),
+    "sample_bispec": py_sod_metrics.SpecificityHandler(**sample_bin),
+    "sample_biber": py_sod_metrics.BERHandler(**sample_bin),
+    "sample_bioa": py_sod_metrics.OverallAccuracyHandler(**sample_bin),
+    "sample_bikappa": py_sod_metrics.KappaHandler(**sample_bin),
     # 二值化数据指标的特殊情况二：汇总所有样本的tp、fp、tn、fn后整体计算指标
-    "overall_bifm": py_sod_metrics.FmeasureHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True, beta=0.3
-    ),
-    "overall_bif1": py_sod_metrics.FmeasureHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True, beta=1
-    ),
-    "overall_bipre": py_sod_metrics.PrecisionHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "overall_birec": py_sod_metrics.RecallHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "overall_biiou": py_sod_metrics.IOUHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "overall_bidice": py_sod_metrics.DICEHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "overall_bispec": py_sod_metrics.SpecificityHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
-    "overall_biber": py_sod_metrics.BERHandler(
-        with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True
-    ),
+    "overall_bifm": py_sod_metrics.FmeasureHandler(**overall_bin, beta=0.3),
+    "overall_bif1": py_sod_metrics.FmeasureHandler(**overall_bin, beta=1),
+    "overall_bipre": py_sod_metrics.PrecisionHandler(**overall_bin),
+    "overall_birec": py_sod_metrics.RecallHandler(**overall_bin),
+    "overall_biiou": py_sod_metrics.IOUHandler(**overall_bin),
+    "overall_bidice": py_sod_metrics.DICEHandler(**overall_bin),
+    "overall_bispec": py_sod_metrics.SpecificityHandler(**overall_bin),
+    "overall_biber": py_sod_metrics.BERHandler(**overall_bin),
+    "overall_bioa": py_sod_metrics.OverallAccuracyHandler(**overall_bin),
+    "overall_bikappa": py_sod_metrics.KappaHandler(**overall_bin),
 }
 
 
 class MetricRecorderV2:
     suppoted_metrics = ["mae", "em", "sm", "wfm"] + sorted(
-        [k for k in BINARY_CLASSIFICATION_METRIC_MAPPING.keys() if not k.startswith(('sample_', 'overall_'))]
+        [
+            k
+            for k in BINARY_CLASSIFICATION_METRIC_MAPPING.keys()
+            if not k.startswith(("sample_", "overall_"))
+        ]
     )
 
     def __init__(self, metric_names=("sm", "wfm", "mae", "fmeasure", "em")):
@@ -248,7 +229,11 @@ class MetricRecorderV2:
 
 class BinaryMetricRecorder:
     suppoted_metrics = ["mae", "sm", "wfm"] + sorted(
-        [k for k in BINARY_CLASSIFICATION_METRIC_MAPPING.keys() if k.startswith(('sample_', 'overall_'))]
+        [
+            k
+            for k in BINARY_CLASSIFICATION_METRIC_MAPPING.keys()
+            if k.startswith(("sample_", "overall_"))
+        ]
     )
 
     def __init__(self, metric_names=("bif1", "biprecision", "birecall", "biiou")):
