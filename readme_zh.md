@@ -56,12 +56,11 @@ pip install pysodmetrics
 - <examples/test_metrics.py>
 - <examples/metric_recorder.py>
 
-## 感谢
+## 参考
 
 - <https://github.com/DengPingFan/CODToolbox>
   - By DengPingFan(<https://github.com/DengPingFan>)
-
-## 参考文献
+- <https://en.wikipedia.org/wiki/Precision_and_recall>
 
 ```text
 @inproceedings{Fmeasure,

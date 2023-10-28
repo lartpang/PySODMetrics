@@ -59,12 +59,17 @@ class IOUHandler(_BaseHandler):
 class SpecificityHandler(_BaseHandler):
     """Specificity
 
+    True negative rate (TNR)/specificity (SPC)/selectivity
+
     specificity = tn / (tn + fp)
     """
 
     def __call__(self, tp, fp, tn, fn):
         # specificities = np.where(TNs + FPs == 0, 0, TNs / (TNs + FPs))
         return self.divide(tn, tn + fp)
+
+
+TNRHandler = SpecificityHandler
 
 
 class DICEHandler(_BaseHandler):
@@ -144,12 +149,30 @@ class PrecisionHandler(_BaseHandler):
 class RecallHandler(_BaseHandler):
     """Recall
 
+    True positive rate (TPR)/recall/sensitivity (SEN)/probability of detection/hit rate/power
+
     recall = tp / (tp + fn)
     """
 
     def __call__(self, tp, fp, tn, fn):
         # recalls = np.where(TPs == 0, 0, TPs / T)
         return self.divide(tp, tp + fn)
+
+
+TPRHandler = RecallHandler
+SensitivityHandler = RecallHandler
+
+
+class FPRHandler(_BaseHandler):
+    """False Positive Rate
+
+    False positive rate (FPR)/probability of false alarm/fall-out
+
+    fpr = fp / (tn + fp)
+    """
+
+    def __call__(self, tp, fp, tn, fn):
+        return self.divide(fp, tn + fp)
 
 
 class BERHandler(_BaseHandler):

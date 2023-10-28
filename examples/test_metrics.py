@@ -29,6 +29,7 @@ FMv2 = py_sod_metrics.FmeasureV2(
         "f1": py_sod_metrics.FmeasureHandler(**sample_gray, beta=0.1),
         "pre": py_sod_metrics.PrecisionHandler(**sample_gray),
         "rec": py_sod_metrics.RecallHandler(**sample_gray),
+        "fpr": py_sod_metrics.FPRHandler(**sample_gray),
         "iou": py_sod_metrics.IOUHandler(**sample_gray),
         "dice": py_sod_metrics.DICEHandler(**sample_gray),
         "spec": py_sod_metrics.SpecificityHandler(**sample_gray),
@@ -40,6 +41,7 @@ FMv2 = py_sod_metrics.FmeasureV2(
         "sample_bif1": py_sod_metrics.FmeasureHandler(**sample_bin, beta=1),
         "sample_bipre": py_sod_metrics.PrecisionHandler(**sample_bin),
         "sample_birec": py_sod_metrics.RecallHandler(**sample_bin),
+        "sample_bifpr": py_sod_metrics.FPRHandler(**sample_bin),
         "sample_biiou": py_sod_metrics.IOUHandler(**sample_bin),
         "sample_bidice": py_sod_metrics.DICEHandler(**sample_bin),
         "sample_bispec": py_sod_metrics.SpecificityHandler(**sample_bin),
@@ -51,6 +53,7 @@ FMv2 = py_sod_metrics.FmeasureV2(
         "overall_bif1": py_sod_metrics.FmeasureHandler(**overall_bin, beta=1),
         "overall_bipre": py_sod_metrics.PrecisionHandler(**overall_bin),
         "overall_birec": py_sod_metrics.RecallHandler(**overall_bin),
+        "overall_bifpr": py_sod_metrics.FPRHandler(**overall_bin),
         "overall_biiou": py_sod_metrics.IOUHandler(**overall_bin),
         "overall_bidice": py_sod_metrics.DICEHandler(**overall_bin),
         "overall_bispec": py_sod_metrics.SpecificityHandler(**overall_bin),
@@ -114,6 +117,12 @@ curr_results = {
     "maxrec": fmv2["rec"]["dynamic"].max(),
     "sample_birec": fmv2["sample_birec"]["binary"],
     "overall_birec": fmv2["overall_birec"]["binary"],
+    # fpr
+    "adpfpr": fmv2["fpr"]["adaptive"],
+    "meanfpr": fmv2["fpr"]["dynamic"].mean(),
+    "maxfpr": fmv2["fpr"]["dynamic"].max(),
+    "sample_bifpr": fmv2["sample_bifpr"]["binary"],
+    "overall_bifpr": fmv2["overall_bifpr"]["binary"],
     # dice
     "adpdice": fmv2["dice"]["adaptive"],
     "meandice": fmv2["dice"]["dynamic"].mean(),
@@ -242,6 +251,72 @@ default_results = {
         "sample_bispec": 0.9799569090918337,
         "wFmeasure": 0.5579812753638986,
     },
+    "v1_4_1": {
+        "MAE": 0.03705558476661653,
+        "Smeasure": 0.9029761578759272,
+        "adpEm": 0.9408760066970617,
+        "adpFm": 0.5816750824038355,
+        "adpber": 0.2354784689008184,
+        "adpdice": 0.5801020564379223,
+        "adpf1": 0.5825795996723205,
+        "adpfm": 0.5816750824038355,
+        "adpiou": 0.5141023436626048,
+        "adpkappa": 0.6568702977598276,
+        "adpoa": 0.9391947016812359,
+        "adppre": 0.583200007681871,
+        "adprec": 0.5777548546727481,
+        "adpfpr": 0.04871179247438492,
+        "adpspec": 0.9512882075256152,
+        "maxEm": 0.9669544828922699,
+        "maxFm": 0.5886784581120638,
+        "maxber": 0.6666666666666666,
+        "maxdice": 0.5830613926289557,
+        "maxf1": 0.6031100666167747,
+        "maxfm": 0.5886784581120638,
+        "maxiou": 0.5201569938888494,
+        "maxkappa": 0.6759493461328753,
+        "maxoa": 0.9654783867686053,
+        "maxpre": 0.6396783912301717,
+        "maxrec": 0.6666666666666666,
+        "maxfpr": 1.0,
+        "maxspec": 0.9965927890353435,
+        "meanEm": 0.9566258293508704,
+        "meanFm": 0.577051059518767,
+        "meanber": 0.23290802950995626,
+        "meandice": 0.5689913551800527,
+        "meanf1": 0.5821115124232528,
+        "meanfm": 0.577051059518767,
+        "meaniou": 0.49816648786971,
+        "meankappa": 0.6443053495487194,
+        "meanoa": 0.9596413706286032,
+        "meanpre": 0.5857695537152126,
+        "meanrec": 0.5599653001125341,
+        "meanfpr": 0.02578135913244661,
+        "meanspec": 0.9742186408675534,
+        "overall_biber": 0.08527759498137788,
+        "overall_bidice": 0.8510675335753018,
+        "overall_bif1": 0.8510675335753017,
+        "overall_bifm": 0.8525259082995088,
+        "overall_biiou": 0.740746352327995,
+        "overall_bikappa": 0.7400114676102276,
+        "overall_bioa": 0.965778,
+        "overall_bipre": 0.8537799277020065,
+        "overall_birec": 0.8483723190115916,
+        "overall_bifpr": 0.018927508974347383,
+        "overall_bispec": 0.9810724910256526,
+        "sample_biber": 0.23037858807333392,
+        "sample_bidice": 0.5738376903441331,
+        "sample_bif1": 0.5738376903441331,
+        "sample_bifm": 0.5829998670906196,
+        "sample_biiou": 0.5039622042094377,
+        "sample_bikappa": 0.6510635726572914,
+        "sample_bioa": 0.964811758770181,
+        "sample_bipre": 0.5916996553523113,
+        "sample_birec": 0.5592859147614985,
+        "sample_bifpr": 0.02004309090816628,
+        "sample_bispec": 0.9799569090918337,
+        "wFmeasure": 0.5579812753638986,
+    },
 }
 
 
@@ -250,7 +325,7 @@ class CheckMetricTestCase(unittest.TestCase):
     def setUpClass(cls):
         print("Current results:")
         pprint(curr_results)
-        cls.default_results = default_results["v1_4_0"]
+        cls.default_results = default_results["v1_4_1"]
 
     def test_sm(self):
         self.assertEqual(curr_results["Smeasure"], self.default_results["Smeasure"])
@@ -303,6 +378,13 @@ class CheckMetricTestCase(unittest.TestCase):
         self.assertEqual(curr_results["maxrec"], self.default_results["maxrec"])
         self.assertEqual(curr_results["sample_birec"], self.default_results["sample_birec"])
         self.assertEqual(curr_results["overall_birec"], self.default_results["overall_birec"])
+
+    def test_fpr(self):
+        self.assertEqual(curr_results["adpfpr"], self.default_results["adpfpr"])
+        self.assertEqual(curr_results["meanfpr"], self.default_results["meanfpr"])
+        self.assertEqual(curr_results["maxfpr"], self.default_results["maxfpr"])
+        self.assertEqual(curr_results["sample_bifpr"], self.default_results["sample_bifpr"])
+        self.assertEqual(curr_results["overall_bifpr"], self.default_results["overall_bifpr"])
 
     def test_iou(self):
         self.assertEqual(curr_results["adpiou"], self.default_results["adpiou"])

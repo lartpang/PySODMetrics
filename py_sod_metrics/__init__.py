@@ -4,12 +4,16 @@ from py_sod_metrics.fmeasurev2 import (
     DICEHandler,
     FmeasureHandler,
     FmeasureV2,
+    FPRHandler,
     IOUHandler,
     KappaHandler,
     OverallAccuracyHandler,
     PrecisionHandler,
     RecallHandler,
+    SensitivityHandler,
     SpecificityHandler,
+    TNRHandler,
+    TPRHandler,
 )
 from py_sod_metrics.sod_metrics import (
     MAE,
