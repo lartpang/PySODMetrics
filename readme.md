@@ -12,7 +12,7 @@
 
 ## Introduction
 
-A simple and efficient implementation of SOD metrics
+A simple and efficient implementation of SOD metrics.
 
 - Based on `numpy` and `scipy`
 - Verification based on Fan's matlab code <https://github.com/DengPingFan/CODToolbox>
@@ -23,7 +23,7 @@ Your improvements and suggestions are welcome.
 
 ### Related Projects
 
-- A Python-based salient object detection and video object segmentation evaluation toolbox. <https://github.com/lartpang/Py-SOD-VOS-EvalToolkit>
+- [PySODEvalToolkit](https://github.com/lartpang/PySODEvalToolkit): A Python-based Evaluation Toolbox for Salient Object Detection and Camouflaged Object Detection
 
 ### Supported Metrics
 
@@ -35,7 +35,7 @@ Your improvements and suggestions are welcome.
 | Multi-Scale IoU                           | bin             |             | `MSIoU`                               |
 | E-measure ($E_{m}$)                       | max,avg,adp     |             | `Emeasure`                            |
 | F-measure (old) ($F_{beta}$)              | max,avg,adp     |             | `Fmeasure`                            |
-| F-measure (old) ($F_{beta}$, $F_{1}$)     | max,avg,adp,bin | bin         | `FmeasureV2`+`FmeasureHandler`        |
+| F-measure (new) ($F_{beta}$, $F_{1}$)     | max,avg,adp,bin | bin         | `FmeasureV2`+`FmeasureHandler`        |
 | BER                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`BERHandler`             |
 | Dice                                      | max,avg,adp,bin | bin         | `FmeasureV2`+`DICEHandler`            |
 | FPR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`FPRHandler`             |
@@ -48,24 +48,6 @@ Your improvements and suggestions are welcome.
 | Specificity                               | max,avg,adp,bin | bin         | `FmeasureV2`+`SpecificityHandler`     |
 | TNR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`TNRHandler`             |
 | TPR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`TPRHandler`             |
-## TODO List
-
-- [x] Speed up the calculation of Emeasure.
-- [x] Add the necessary documentation for different functions.
-
-## Compared with [Matlab Code from Fan](https://github.com/DengPingFan/CODToolbox)
-
-In our comparison (the test code can be seen under the `test` folder), the result is consistent with Fan's code, as follows:
-
-```text
-ours:   Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; maxEm:0.967; adpFm:0.582; meanFm:0.577; maxFm:0.589
-matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; maxEm:0.967; adpFm:0.582; meanFm:0.577; maxFm:0.589.
-```
-
-**NOTE**
-
-- The matlab code needs to change `Bi_sal(sal>threshold)=1;` to `Bi_sal(sal>=threshold)=1;` in <https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102>. For related discussion, please see [the issue](https://github.com/DengPingFan/CODToolbox/issues/1).
-- 2021-12-20 (version `1.3.0`): Due to the difference between numpy and matlab, in version `1.2.x`, there are very slight differences on some metrics between the results of the matlab code and ours. The [recent PR](https://github.com/lartpang/PySODMetrics/pull/3) alleviated this problem. However, there are still very small differences on E-measure. The results in most papers are rounded off to three or four significant figures, so, there is no obvious difference between the new version and the version `1.2.x` for them.
 
 ## Usage
 
@@ -81,8 +63,9 @@ The core files are in the folder `py_sod_metrics`.
 
 ## Reference
 
-- <https://github.com/DengPingFan/CODToolbox>
-  - By DengPingFan(<https://github.com/DengPingFan>)
+- [Matlab Code](https://github.com/DengPingFan/CODToolbox) by DengPingFan(<https://github.com/DengPingFan>): In our comparison (the test code can be seen under the `test` folder), the result is consistent with the code.
+  - The matlab code needs to change `Bi_sal(sal>threshold)=1;` to `Bi_sal(sal>=threshold)=1;` in <https://github.com/DengPingFan/CODToolbox/blob/910358910c7824a4237b0ea689ac9d19d1958d11/Onekey_Evaluation_Code/OnekeyEvaluationCode/main.m#L102>. For related discussion, please see [the issue](https://github.com/DengPingFan/CODToolbox/issues/1).
+  - 2021-12-20 (version `1.3.0`): Due to the difference between numpy and matlab, in version `1.2.x`, there are very slight differences on some metrics between the results of the matlab code and ours. The [recent PR](https://github.com/lartpang/PySODMetrics/pull/3) alleviated this problem. However, there are still very small differences on E-measure. The results in most papers are rounded off to three or four significant figures, so, there is no obvious difference between the new version and the version `1.2.x` for them.
 - <https://en.wikipedia.org/wiki/Precision_and_recall>
 
 ```text
