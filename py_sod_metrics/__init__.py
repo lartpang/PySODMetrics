@@ -15,6 +15,7 @@ from py_sod_metrics.fmeasurev2 import (
     TNRHandler,
     TPRHandler,
 )
+from py_sod_metrics.multiscale_iou import MSIoU
 from py_sod_metrics.sod_metrics import (
     MAE,
     Emeasure,

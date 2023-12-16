@@ -18,6 +18,7 @@ WFM = py_sod_metrics.WeightedFmeasure()
 SM = py_sod_metrics.Smeasure()
 EM = py_sod_metrics.Emeasure()
 MAE = py_sod_metrics.MAE()
+MSIOU = py_sod_metrics.MSIoU()
 
 sample_gray = dict(with_adaptive=True, with_dynamic=True)
 sample_bin = dict(with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True)
@@ -78,6 +79,7 @@ for i, mask_name in enumerate(mask_name_list):
     SM.step(pred=pred, gt=mask)
     EM.step(pred=pred, gt=mask)
     MAE.step(pred=pred, gt=mask)
+    MSIOU.step(pred=pred, gt=mask)
     FMv2.step(pred=pred, gt=mask)
 
 fm = FM.get_results()["fm"]
@@ -85,12 +87,14 @@ wfm = WFM.get_results()["wfm"]
 sm = SM.get_results()["sm"]
 em = EM.get_results()["em"]
 mae = MAE.get_results()["mae"]
+msiou = MSIOU.get_results()["msiou"]
 fmv2 = FMv2.get_results()
 
 curr_results = {
     "MAE": mae,
     "Smeasure": sm,
     "wFmeasure": wfm,
+    "MSIOU": msiou,
     # E-measure for sod
     "adpEm": em["adp"],
     "meanEm": em["curve"].mean(),
@@ -253,6 +257,7 @@ default_results = {
     },
     "v1_4_1": {
         "MAE": 0.03705558476661653,
+        "MSIOU": 0.8228002109838289,
         "Smeasure": 0.9029761578759272,
         "adpEm": 0.9408760066970617,
         "adpFm": 0.5816750824038355,
@@ -335,6 +340,9 @@ class CheckMetricTestCase(unittest.TestCase):
 
     def test_mae(self):
         self.assertEqual(curr_results["MAE"], self.default_results["MAE"])
+
+    def test_msiou(self):
+        self.assertEqual(curr_results["MSIOU"], self.default_results["MSIOU"])
 
     def test_fm(self):
         self.assertEqual(curr_results["adpFm"], self.default_results["adpFm"])
