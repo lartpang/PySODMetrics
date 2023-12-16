@@ -25,6 +25,30 @@
 
 - A Python-based salient object detection and video object segmentation evaluation toolbox. <https://github.com/lartpang/Py-SOD-VOS-EvalToolkit>
 
+### 支持的指标
+
+| Metric                                    | Sample-based    | Whole-based | Related Class                         |
+| ----------------------------------------- | --------------- | ----------- | ------------------------------------- |
+| MAE                                       | soft            |             | `MAE`                                 |
+| S-measure $S_{m}$                         | soft            |             | `Smeasure`                            |
+| weighted F-measure ($F^{\omega}_{\beta}$) | soft            |             | `WeightedFmeasure`                    |
+| Multi-Scale IoU                           | bin             |             | `MSIoU`                               |
+| E-measure ($E_{m}$)                       | max,avg,adp     |             | `Emeasure`                            |
+| F-measure (old) ($F_{beta}$)              | max,avg,adp     |             | `Fmeasure`                            |
+| F-measure (old) ($F_{beta}$, $F_{1}$)     | max,avg,adp,bin | bin         | `FmeasureV2`+`FmeasureHandler`        |
+| BER                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`BERHandler`             |
+| Dice                                      | max,avg,adp,bin | bin         | `FmeasureV2`+`DICEHandler`            |
+| FPR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`FPRHandler`             |
+| IoU                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`IOUHandler`             |
+| Kappa                                     | max,avg,adp,bin | bin         | `FmeasureV2`+`KappaHandler`           |
+| Overall Accuracy                          | max,avg,adp,bin | bin         | `FmeasureV2`+`OverallAccuracyHandler` |
+| Precision                                 | max,avg,adp,bin | bin         | `FmeasureV2`+`PrecisionHandler`       |
+| Recall                                    | max,avg,adp,bin | bin         | `FmeasureV2`+`RecallHandler`          |
+| Sensitivity                               | max,avg,adp,bin | bin         | `FmeasureV2`+`SensitivityHandler`     |
+| Specificity                               | max,avg,adp,bin | bin         | `FmeasureV2`+`SpecificityHandler`     |
+| TNR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`TNRHandler`             |
+| TPR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`TPRHandler`             |
+
 ## 与[范的 Matlab 代码](https://github.com/DengPingFan/CODToolbox)的比较
 
 在我们的测试中 (测试代码可见`test`文件夹下内容)，结果与 Fan 的代码一致，如下:
@@ -41,20 +65,15 @@ matlab: Smeasure:0.903; wFmeasure:0.558; MAE:0.037; adpEm:0.941; meanEm:0.957; m
 
 ## 使用
 
-### ~~下载文件为自己的脚本~~
-
 核心文件在文件夹 `py_sod_metrics` 中。
 
-### 安装成一个包
-
-```shell script
-pip install pysodmetrics
-```
+- **[新，但可能不稳定]** 从源代码安装：`pip install git+https://github.com/lartpang/PySODMetrics.git`
+- **[更稳定一些]** 从 PyPI 安装：`pip install pysodmetrics`
 
 ### 示例
 
-- <examples/test_metrics.py>
-- <examples/metric_recorder.py>
+- [examples/test_metrics.py](./examples/test_metrics.py)
+- [examples/metric_recorder.py](./examples/metric_recorder.py)
 
 ## 参考
 
@@ -102,5 +121,12 @@ pip install pysodmetrics
   booktitle=CVPR,
   pages={248--255},
   year={2014}
+}
+
+@inproceedings{MSIoU,
+    title = {Multiscale IOU: A Metric for Evaluation of Salient Object Detection with Fine Structures},
+    author = {Ahmadzadeh, Azim and Kempton, Dustin J. and Chen, Yang and Angryk, Rafal A.},
+    booktitle = ICIP,
+    year = {2021},
 }
 ```

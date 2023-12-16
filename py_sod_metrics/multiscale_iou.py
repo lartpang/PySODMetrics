@@ -7,16 +7,15 @@ from .utils import TYPE
 class MSIoU:
     def __init__(self):
         """
-        Multiscale Intersection over Union (MS-IoU) metric.
+        Multi-Scale Intersection over Union (MSIoU) metric.
 
         ::
 
-            @inproceedings{ahmadzadehMultiscaleIOUMetric2021,
+            @inproceedings{MSIoU,
                 title = {Multiscale IOU: A Metric for Evaluation of Salient Object Detection with Fine Structures},
-                booktitle = {2021 IEEE International Conference on Image Processing (ICIP)},
                 author = {Ahmadzadeh, Azim and Kempton, Dustin J. and Chen, Yang and Angryk, Rafal A.},
+                booktitle = ICIP,
                 year = {2021},
-                doi = {10.1109/ICIP42928.2021.9506337}
             }
         """
         # The values of this collection determines the resolutions based on which MIoU is computed.
@@ -58,14 +57,6 @@ class MSIoU:
         return image
 
     def cal_msiou(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        """
-        Args:
-            pred (np.ndarray[bool]):
-            gt (np.ndarray[bool]):
-
-        Returns:
-            float:
-        """
         pred = self.get_edge(pred)
         gt = self.get_edge(gt)
 
@@ -82,13 +73,6 @@ class MSIoU:
         return msiou
 
     def step(self, pred: np.ndarray, gt: np.ndarray):
-        """
-        computes the metric for the two given regions. Use 'miou/utils/mask_loader.py'
-        to properly load masks as binary arrays for `pred` and `gt`.
-
-        :param pred: mask segmentation of the reference (ground-truth) object.
-        :param gt: mask segmentation of the target (detected) object.
-        """
         gt = gt > 128
         pred = pred > 128
 
@@ -97,7 +81,7 @@ class MSIoU:
         return msiou
 
     def get_results(self) -> dict:
-        """Return the results about MS-IoU.
+        """Return the results about MSIoU.
 
         :return: dict(msiou=msiou)
         """
