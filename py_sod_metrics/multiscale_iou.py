@@ -47,7 +47,9 @@ class MSIoU:
         if pad_w != 0:
             pad_w = cell_size - pad_w
         if pad_h != 0 or pad_w != 0:
-            image = np.pad(image, ((pad_h, 0), (pad_w, 0)), mode="constant", constant_values=0)
+            image = np.pad(
+                image, ((pad_h, 0), (pad_w, 0)), mode="constant", constant_values=0
+            )
 
         h = image.shape[0]
         w = image.shape[1]
@@ -78,7 +80,6 @@ class MSIoU:
 
         msiou = self.cal_msiou(pred, gt)
         self.msious.append(msiou)
-        return msiou
 
     def get_results(self) -> dict:
         """Return the results about MSIoU.
