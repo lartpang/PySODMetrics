@@ -311,20 +311,31 @@ class FmeasureV2:
         TNs = BG - FPs  # 背景 预测为 背景
         return {"tp": TPs, "fp": FPs, "tn": TNs, "fn": FNs}
 
-    def step(self, pred: np.ndarray, gt: np.ndarray):
+    def step(self, pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
         """Statistics the metrics for the pair of pred and gt.
 
         Args:
             pred (np.ndarray): Prediction, gray scale image.
             gt (np.ndarray): Ground truth, gray scale image.
+            normalize (bool, optional): Whether to normalize the input data. Defaults to True.
 
         Raises:
             ValueError: Please add your metric handler before using `step()`.
+            ValueError: Please make sure the array `pred` is normalized in [0, 1].
+            ValueError: Please make sure the array `gt` is binary.
         """
         if not self._metric_handlers:  # 没有添加metric_handler
             raise ValueError("Please add your metric handler before using `step()`.")
 
-        pred, gt = prepare_data(pred, gt)
+        if normalize:
+            pred, gt = prepare_data(pred, gt)
+        else:
+            if not (pred.dtype in [np.float32, np.float64] and 0 <= pred.min() <= pred.max() <= 1):
+                raise ValueError(
+                    "Please make sure the array `pred` is normalized in [0, 1] with dtype float32 or float64."
+                )
+            if gt.dtype != bool:
+                raise ValueError("Please make sure the array `gt` is binary.")
 
         FG = np.count_nonzero(gt)  # 真实前景, FG=(TPs+FNs)
         BG = gt.size - FG  # 真实背景, BG=(TNs+FPs)
