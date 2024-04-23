@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+authors:
+- family-names: "Pang"
+  given-names: "Youwei"
+date-released: 2020-11-21
+keywords:
+  - metrics
+  - metrics-reported
+  - metrics-evaluation
+  - metrics-library
+  - salient-object-detection
+  - saliency-detection
+  - saliency-methods
+license: MIT License
+title: "PySODMetrics"
+abstract: "A simple and efficient implementation of SOD metrics"
+url: "https://github.com/lartpang/PySODMetrics"
+repository-code: "https://github.com/lartpang/PySODMetrics"
+version: v1.4.2
