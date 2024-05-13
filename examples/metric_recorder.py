@@ -3,8 +3,13 @@
 # @Author  : Lart Pang
 # @GitHub  : https://github.com/lartpang
 
+import os
+import sys
+
+import cv2
 import numpy as np
 
+sys.path.append("..")
 import py_sod_metrics
 
 
@@ -39,7 +44,7 @@ INDIVADUAL_METRIC_MAPPING = {
 }
 
 
-class MetricRecorderV1:
+class GrayscaleMetricRecorderV1:
     def __init__(self):
         """
         用于统计各种指标的类
@@ -107,51 +112,49 @@ class MetricRecorderV1:
 sample_gray = dict(with_adaptive=True, with_dynamic=True)
 sample_bin = dict(with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=True)
 overall_bin = dict(with_adaptive=False, with_dynamic=False, with_binary=True, sample_based=False)
-BINARY_CLASSIFICATION_METRIC_MAPPING = {
+# fmt: off
+GRAYSCALE_METRIC_MAPPING = {
     # 灰度数据指标
-    "fm": py_sod_metrics.FmeasureHandler(**sample_gray, beta=0.3),
-    "f1": py_sod_metrics.FmeasureHandler(**sample_gray, beta=1),
-    "pre": py_sod_metrics.PrecisionHandler(**sample_gray),
-    "rec": py_sod_metrics.RecallHandler(**sample_gray),
-    "iou": py_sod_metrics.IOUHandler(**sample_gray),
-    "dice": py_sod_metrics.DICEHandler(**sample_gray),
-    "spec": py_sod_metrics.SpecificityHandler(**sample_gray),
-    "ber": py_sod_metrics.BERHandler(**sample_gray),
-    "oa": py_sod_metrics.OverallAccuracyHandler(**sample_gray),
-    "kappa": py_sod_metrics.KappaHandler(**sample_gray),
-    # 二值化数据指标的特殊情况一：各个样本独立计算指标后取平均
-    "sample_bifm": py_sod_metrics.FmeasureHandler(**sample_bin, beta=0.3),
-    "sample_bif1": py_sod_metrics.FmeasureHandler(**sample_bin, beta=1),
-    "sample_bipre": py_sod_metrics.PrecisionHandler(**sample_bin),
-    "sample_birec": py_sod_metrics.RecallHandler(**sample_bin),
-    "sample_biiou": py_sod_metrics.IOUHandler(**sample_bin),
-    "sample_bidice": py_sod_metrics.DICEHandler(**sample_bin),
-    "sample_bispec": py_sod_metrics.SpecificityHandler(**sample_bin),
-    "sample_biber": py_sod_metrics.BERHandler(**sample_bin),
-    "sample_bioa": py_sod_metrics.OverallAccuracyHandler(**sample_bin),
-    "sample_bikappa": py_sod_metrics.KappaHandler(**sample_bin),
-    # 二值化数据指标的特殊情况二：汇总所有样本的tp、fp、tn、fn后整体计算指标
-    "overall_bifm": py_sod_metrics.FmeasureHandler(**overall_bin, beta=0.3),
-    "overall_bif1": py_sod_metrics.FmeasureHandler(**overall_bin, beta=1),
-    "overall_bipre": py_sod_metrics.PrecisionHandler(**overall_bin),
-    "overall_birec": py_sod_metrics.RecallHandler(**overall_bin),
-    "overall_biiou": py_sod_metrics.IOUHandler(**overall_bin),
-    "overall_bidice": py_sod_metrics.DICEHandler(**overall_bin),
-    "overall_bispec": py_sod_metrics.SpecificityHandler(**overall_bin),
-    "overall_biber": py_sod_metrics.BERHandler(**overall_bin),
-    "overall_bioa": py_sod_metrics.OverallAccuracyHandler(**overall_bin),
-    "overall_bikappa": py_sod_metrics.KappaHandler(**overall_bin),
+    "fm": {"handler": py_sod_metrics.FmeasureHandler, "kwargs": dict(**sample_gray, beta=0.3)},
+    "f1": {"handler": py_sod_metrics.FmeasureHandler, "kwargs": dict(**sample_gray, beta=1)},
+    "pre": {"handler": py_sod_metrics.PrecisionHandler, "kwargs": sample_gray},
+    "rec": {"handler": py_sod_metrics.RecallHandler, "kwargs": sample_gray},
+    "iou": {"handler": py_sod_metrics.IOUHandler, "kwargs": sample_gray},
+    "dice": {"handler": py_sod_metrics.DICEHandler, "kwargs": sample_gray},
+    "spec": {"handler": py_sod_metrics.SpecificityHandler, "kwargs": sample_gray},
+    "ber": {"handler": py_sod_metrics.BERHandler, "kwargs": sample_gray},
+    "oa": {"handler": py_sod_metrics.OverallAccuracyHandler, "kwargs": sample_gray},
+    "kappa": {"handler": py_sod_metrics.KappaHandler, "kwargs": sample_gray},
 }
+BINARY_METRIC_MAPPING = {
+    # 二值化数据指标的特殊情况一：各个样本独立计算指标后取平均
+    "sample_bifm": {"handler": py_sod_metrics.FmeasureHandler, "kwargs": dict(**sample_bin, beta=0.3)},
+    "sample_bif1": {"handler": py_sod_metrics.FmeasureHandler, "kwargs": dict(**sample_bin, beta=1)},
+    "sample_bipre": {"handler": py_sod_metrics.PrecisionHandler, "kwargs": sample_bin},
+    "sample_birec": {"handler": py_sod_metrics.RecallHandler, "kwargs": sample_bin},
+    "sample_biiou": {"handler": py_sod_metrics.IOUHandler, "kwargs": sample_bin},
+    "sample_bidice": {"handler": py_sod_metrics.DICEHandler, "kwargs": sample_bin},
+    "sample_bispec": {"handler": py_sod_metrics.SpecificityHandler, "kwargs": sample_bin},
+    "sample_biber": {"handler": py_sod_metrics.BERHandler, "kwargs": sample_bin},
+    "sample_bioa": {"handler": py_sod_metrics.OverallAccuracyHandler, "kwargs": sample_bin},
+    "sample_bikappa": {"handler": py_sod_metrics.KappaHandler, "kwargs": sample_bin},
+    # 二值化数据指标的特殊情况二：汇总所有样本的tp、fp、tn、fn后整体计算指标
+    "overall_bifm": {"handler": py_sod_metrics.FmeasureHandler, "kwargs": dict(**overall_bin, beta=0.3)},
+    "overall_bif1": {"handler": py_sod_metrics.FmeasureHandler, "kwargs": dict(**overall_bin, beta=1)},
+    "overall_bipre": {"handler": py_sod_metrics.PrecisionHandler, "kwargs": overall_bin},
+    "overall_birec": {"handler": py_sod_metrics.RecallHandler, "kwargs": overall_bin},
+    "overall_biiou": {"handler": py_sod_metrics.IOUHandler, "kwargs": overall_bin},
+    "overall_bidice": {"handler": py_sod_metrics.DICEHandler, "kwargs": overall_bin},
+    "overall_bispec": {"handler": py_sod_metrics.SpecificityHandler, "kwargs": overall_bin},
+    "overall_biber": {"handler": py_sod_metrics.BERHandler, "kwargs": overall_bin},
+    "overall_bioa": {"handler": py_sod_metrics.OverallAccuracyHandler, "kwargs": overall_bin},
+    "overall_bikappa": {"handler": py_sod_metrics.KappaHandler, "kwargs": overall_bin},
+}
+# fmt: on
 
 
-class MetricRecorderV2:
-    suppoted_metrics = ["mae", "em", "sm", "wfm"] + sorted(
-        [
-            k
-            for k in BINARY_CLASSIFICATION_METRIC_MAPPING.keys()
-            if not k.startswith(("sample_", "overall_"))
-        ]
-    )
+class GrayscaleMetricRecorderV2:
+    suppoted_metrics = ["mae", "em", "sm", "wfm"] + sorted(GRAYSCALE_METRIC_MAPPING.keys())
 
     def __init__(self, metric_names=("sm", "wfm", "mae", "fmeasure", "em")):
         """
@@ -168,11 +171,11 @@ class MetricRecorderV2:
         for metric_name in metric_names:
             if metric_name in INDIVADUAL_METRIC_MAPPING:
                 self.metric_objs[metric_name] = INDIVADUAL_METRIC_MAPPING[metric_name]()
-            else:  # metric_name in BINARY_CLASSIFICATION_METRIC_MAPPING
+            else:  # metric_name in GRAYSCALE_METRIC_MAPPING
                 if not has_existed:  # only init once
                     self.metric_objs["fmeasurev2"] = py_sod_metrics.FmeasureV2()
                     has_existed = True
-                metric_handler = BINARY_CLASSIFICATION_METRIC_MAPPING[metric_name]
+                metric_handler = GRAYSCALE_METRIC_MAPPING[metric_name]
                 self.metric_objs["fmeasurev2"].add_handler(
                     handler_name=metric_name,
                     metric_handler=metric_handler["handler"](**metric_handler["kwargs"]),
@@ -204,13 +207,13 @@ class MetricRecorderV2:
                 results = info[m_name]
                 if m_name in ("wfm", "sm", "mae"):
                     numerical_results[m_name] = results
-                elif m_name == "em":
+                elif m_name in ("fm", "em"):
                     sequential_results[m_name] = np.flip(results["curve"])
                     numerical_results.update(
                         {
-                            "maxem": results["curve"].max(),
-                            "avgem": results["curve"].mean(),
-                            "adpem": results["adp"],
+                            f"max{m_name}": results["curve"].max(),
+                            f"avg{m_name}": results["curve"].mean(),
+                            f"adp{m_name}": results["adp"],
                         }
                     )
                 else:
@@ -228,13 +231,7 @@ class MetricRecorderV2:
 
 
 class BinaryMetricRecorder:
-    suppoted_metrics = ["mae", "sm", "wfm"] + sorted(
-        [
-            k
-            for k in BINARY_CLASSIFICATION_METRIC_MAPPING.keys()
-            if k.startswith(("sample_", "overall_"))
-        ]
-    )
+    suppoted_metrics = ["mae", "sm", "wfm"] + sorted(BINARY_METRIC_MAPPING.keys())
 
     def __init__(self, metric_names=("bif1", "biprecision", "birecall", "biiou")):
         """
@@ -251,11 +248,11 @@ class BinaryMetricRecorder:
         for metric_name in metric_names:
             if metric_name in INDIVADUAL_METRIC_MAPPING:
                 self.metric_objs[metric_name] = INDIVADUAL_METRIC_MAPPING[metric_name]()
-            else:  # metric_name in BINARY_CLASSIFICATION_METRIC_MAPPING
+            else:  # metric_name in BINARY_METRIC_MAPPING
                 if not has_existed:  # only init once
                     self.metric_objs["fmeasurev2"] = py_sod_metrics.FmeasureV2()
                     has_existed = True
-                metric_handler = BINARY_CLASSIFICATION_METRIC_MAPPING[metric_name]
+                metric_handler = BINARY_METRIC_MAPPING[metric_name]
                 self.metric_objs["fmeasurev2"].add_handler(
                     handler_name=metric_name,
                     metric_handler=metric_handler["handler"](**metric_handler["kwargs"]),
@@ -295,13 +292,18 @@ class BinaryMetricRecorder:
 
 
 if __name__ == "__main__":
-    data_loader = ...
-    model = ...
+    data_root = "./test_data"
+    mask_root = os.path.join(data_root, "masks")
+    pred_root = os.path.join(data_root, "preds")
+    masks = [os.path.join(mask_root, f) for f in sorted(os.listdir(mask_root))]
+    preds = [os.path.join(pred_root, f) for f in sorted(os.listdir(pred_root))]
 
-    cal_total_seg_metrics = MetricRecorderV2()
-    for batch in data_loader:
-        seg_preds = model(batch)
-        for seg_pred in seg_preds:
-            mask_array = ...
-            cal_total_seg_metrics.step(seg_pred, mask_array)
-    fixed_seg_results = cal_total_seg_metrics.show()
+    metrics_v1 = GrayscaleMetricRecorderV2(metric_names=GrayscaleMetricRecorderV2.suppoted_metrics)
+    metrics_v2 = BinaryMetricRecorder(metric_names=BinaryMetricRecorder.suppoted_metrics)
+    for mask, pred in zip(masks, preds):
+        mask = cv2.imread(mask, cv2.IMREAD_GRAYSCALE)
+        pred = cv2.imread(pred, cv2.IMREAD_GRAYSCALE)
+        metrics_v1.step(pred, mask)
+        metrics_v2.step(pred, mask)
+    print(metrics_v1.show())
+    print(metrics_v2.show())
