@@ -110,7 +110,7 @@ overall_bin = dict(with_adaptive=False, with_dynamic=False, with_binary=True, sa
 BINARY_CLASSIFICATION_METRIC_MAPPING = {
     # 灰度数据指标
     "fm": py_sod_metrics.FmeasureHandler(**sample_gray, beta=0.3),
-    "f1": py_sod_metrics.FmeasureHandler(**sample_gray, beta=0.1),
+    "f1": py_sod_metrics.FmeasureHandler(**sample_gray, beta=1),
     "pre": py_sod_metrics.PrecisionHandler(**sample_gray),
     "rec": py_sod_metrics.RecallHandler(**sample_gray),
     "iou": py_sod_metrics.IOUHandler(**sample_gray),
