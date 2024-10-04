@@ -34,7 +34,7 @@ Your improvements and suggestions are welcome.
 | weighted F-measure ($F^{\omega}_{\beta}$) | soft            |             | `WeightedFmeasure`                    |
 | Multi-Scale IoU                           | bin             |             | `MSIoU`                               |
 | E-measure ($E_{m}$)                       | max,avg,adp     |             | `Emeasure`                            |
-| F-measure (old) ($F_{beta}$)              | max,avg,adp     |             | `Fmeasure`                            |
+| F-measure (old) ($F_{beta}$)              | max,avg,adp     |             | `Fmeasure` (Will be removed!)         |
 | F-measure (new) ($F_{beta}$, $F_{1}$)     | max,avg,adp,bin | bin         | `FmeasureV2`+`FmeasureHandler`        |
 | BER                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`BERHandler`             |
 | Dice                                      | max,avg,adp,bin | bin         | `FmeasureV2`+`DICEHandler`            |
