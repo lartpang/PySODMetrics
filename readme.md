@@ -8,6 +8,7 @@
   <img src="https://img.shields.io/github/last-commit/lartpang/PySODMetrics">
   <img src="https://img.shields.io/github/last-commit/lartpang/PySODMetrics">
   <img src="https://img.shields.io/github/release-date/lartpang/PySODMetrics">
+  <img src="https://api.star-history.com/svg?repos=lartpang/PySODMetrics&type=Date" alt="Star History Chart" width="600" height="auto">
 </div>
 
 ## Introduction
