@@ -32,7 +32,7 @@
 | MAE                                       | soft            |             | `MAE`                                 |
 | S-measure $S_{m}$                         | soft            |             | `Smeasure`                            |
 | weighted F-measure ($F^{\omega}_{\beta}$) | soft            |             | `WeightedFmeasure`                    |
-| Multi-Scale IoU                           | bin             |             | `MSIoU`                               |
+| Multi-Scale IoU                           | max,avg,adp,bin |             | `MSIoU`                               |
 | E-measure ($E_{m}$)                       | max,avg,adp     |             | `Emeasure`                            |
 | F-measure (old) ($F_{beta}$)              | max,avg,adp     |             | `Fmeasure`                            |
 | F-measure (new) ($F_{beta}$, $F_{1}$)     | max,avg,adp,bin | bin         | `FmeasureV2`+`FmeasureHandler`        |
