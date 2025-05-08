@@ -1,26 +1,69 @@
-name: Upload Python Package
+name: Publish Python 🐍 distribution 📦 to PyPI
 
+# 触发条件：当手动创建Release时触发（包括草稿发布转正式发布）
 on:
   release:
     types: [created]
 
 jobs:
-  deploy:
+  build:
+    name: Build distribution 📦
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
+    # 1. 检出仓库代码
+    - uses: actions/checkout@v4
       with:
-        python-version: '3.x'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install setuptools wheel twine
-    - name: Build and publish
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_NAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PSS }}
-      run: |
-        python setup.py sdist bdist_wheel
-        twine upload dist/*
+        # 禁用凭据持久化（避免权限残留）
+        persist-credentials: false
+
+    # 2. 设置Python环境（使用最新的3.x版本）
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+
+    # 3. 安装Python构建工具
+    - name: Install pypa/build
+      run: python3 -m pip install build --user
+
+    # 4. 构建二进制wheel和源代码tarball
+    - name: Build a binary wheel and a source tarball
+      run: python3 -m build
+
+    # 5. 保存构建产物（dist目录下的文件）
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+        retention-days: 1 # 1 天后删除 artifact
+
+  publish-to-pypi:
+    name: Publish Python 🐍 distribution 📦 to PyPI
+    # 条件判断：仅当满足以下所有条件时执行
+    # 1. 事件类型为Release创建
+    # 2. 标签以refs/tags/v开头（即vX.Y.Z格式）
+    # 3. 标签包含点号（确保版本分隔符存在）
+    # 4. 排除包含连续点号的异常标签（如v1..2）
+    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')
+    needs: [build]  # 依赖build作业的完成
+    runs-on: ubuntu-latest
+    # 环境配置
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pysodmetrics
+    permissions:
+      # 必须配置OIDC权限用于可信发布
+      id-token: write
+
+    steps:
+    # 6. 下载之前构建阶段保存的产物
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    # 7. 发布到PyPI
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1

@@ -33,58 +33,108 @@ class MSIoU:
         sy = ndimage.sobel(mask, axis=1, mode="constant")
         sob = np.hypot(sx, sy)
         sob[sob > 0] = 1
-        sob[sob <= 0] = 0
         return sob
 
     def shrink_by_grid(self, image: np.ndarray, cell_size: int) -> np.ndarray:
-        """Box-counting after the zero padding if needed."""
+        """Shrink the image by summing values within grid cells.
+
+        Performs box-counting after applying zero padding if the image dimensions
+        are not perfectly divisible by the cell size.
+
+        :param image: The input binary image (edges).
+        :param cell_size: The size of the grid cells.
+        :return: A shrunk binary image where each pixel represents a grid cell.
+        """
+        if cell_size <= 0:
+            raise ValueError("Cell size must be a positive integer")
+
         h, w = image.shape[:2]
 
-        pad_h = h % cell_size
-        if pad_h != 0:
-            pad_h = cell_size - pad_h
-        pad_w = w % cell_size
-        if pad_w != 0:
-            pad_w = cell_size - pad_w
-        if pad_h != 0 or pad_w != 0:
-            image = np.pad(
-                image, ((pad_h, 0), (pad_w, 0)), mode="constant", constant_values=0
-            )
+        # Calculate padding sizes to make dimensions divisible by cell_size
+        pad_h = (cell_size - h % cell_size) % cell_size
+        pad_w = (cell_size - w % cell_size) % cell_size
 
-        h = image.shape[0]
-        w = image.shape[1]
+        # Apply padding if necessary
+        if pad_h > 0 or pad_w > 0:
+            # Padding is added to the top and left edges.
+            image = np.pad(image, ((pad_h, 0), (pad_w, 0)), mode="constant", constant_values=0)
+        # Reshape and sum within each cell
+
+        h, w = image.shape[:2]
         image = image.reshape(h // cell_size, cell_size, w // cell_size, cell_size)
         image = image.sum(axis=(1, 3))
         image[image > 0] = 1
         return image
 
     def cal_msiou(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        pred = self.get_edge(pred)
-        gt = self.get_edge(gt)
+        """Calculate the Multi-Scale IoU for a single prediction-ground truth pair.
 
+        This method first extracts edges from both prediction and ground truth,
+        then computes IoU ratios at multiple scales defined by self.cell_sizes.
+        Finally, it calculates the area under the curve of these ratios.
+
+        :param pred: Binary prediction mask.
+        :param gt: Binary ground truth mask.
+        :return: The MSIoU score for the given pair (float between 0 and 1).
+        """
+        # Extract edges from both prediction and ground truth
+        pred_edge = self.get_edge(pred)
+        gt_edge = self.get_edge(gt)
+
+        # Calculate IoU ratios at different scales
         ratios = []
         for cell_size in self.cell_sizes:
-            s_pred = self.shrink_by_grid(pred, cell_size=cell_size)
-            s_gt = self.shrink_by_grid(gt, cell_size=cell_size)
+            # Shrink both prediction and ground truth edges
+            s_pred = self.shrink_by_grid(pred_edge, cell_size=cell_size)
+            s_gt = self.shrink_by_grid(gt_edge, cell_size=cell_size)
+
+            # Calculate IoU with smoothing to prevent division by zero
             numerator = np.logical_and(s_pred, s_gt).sum() + 1
+            # Only consider ground truth for denominator
             denominator = s_gt.sum() + 1
             ratios.append(numerator / denominator)
 
-        # Calculates area under the curves using Trapezoids.
-        msiou = np.trapz(y=ratios, dx=1 / (len(self.cell_sizes) - 1))
+        # Calculate area under the curve using trapezoidal rule
+        if len(self.cell_sizes) > 1:
+            msiou = np.trapz(y=ratios, dx=1 / (len(self.cell_sizes) - 1))
+        else:
+            # Handle edge case with only one cell size
+            msiou = ratios[0]
+
         return msiou
 
-    def step(self, pred: np.ndarray, gt: np.ndarray):
-        gt = gt > 128
-        pred = pred > 128
+    def step(self, pred: np.ndarray, gt: np.ndarray) -> None:
+        """Process one prediction-ground truth pair.
 
-        msiou = self.cal_msiou(pred, gt)
+        Binarize predictions and ground truth using a threshold of 128, calculates MSIoU,
+        and stores the result for later aggregation.
+
+        :param pred: Grayscale prediction map (0-255).
+        :param gt: Grayscale ground truth map (0-255).
+        """
+        # Validate input
+        if pred.shape != gt.shape:
+            raise ValueError(f"Shape mismatch: pred {pred.shape} vs gt {gt.shape}")
+
+        # Binarize input arrays (assumes grayscale images with values in [0, 255])
+        gt_bin = gt > 128
+        pred_bin = pred > 128
+
+        # Calculate MSIoU for this pair and store the result
+        msiou = self.cal_msiou(pred_bin, gt_bin)
         self.msious.append(msiou)
 
     def get_results(self) -> dict:
         """Return the results about MSIoU.
 
-        :return: dict(msiou=msiou)
+        Calculates the mean of all stored MSIoU values from previous calls to step().
+
+        :return: Dictionary with key 'msiou' and the mean MSIoU value.
+        :raises: ValueError if no samples have been processed.
         """
+        if not self.msious:
+            raise ValueError("No samples have been processed. Call step() first.")
+
+        # Calculate mean MSIoU across all processed samples
         msiou = np.mean(np.array(self.msious, TYPE))
-        return dict(msiou=msiou)
+        return {"msiou": msiou}

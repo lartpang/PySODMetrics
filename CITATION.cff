@@ -10,6 +10,7 @@ keywords:
   - metrics-evaluation
   - metrics-library
   - salient-object-detection
+  - camouflaged-object-detection
   - saliency-detection
   - saliency-methods
 license: MIT License
@@ -17,4 +18,4 @@ title: "PySODMetrics"
 abstract: "A simple and efficient implementation of SOD metrics"
 url: "https://github.com/lartpang/PySODMetrics"
 repository-code: "https://github.com/lartpang/PySODMetrics"
-version: v1.4.2
+version: v1.4.3

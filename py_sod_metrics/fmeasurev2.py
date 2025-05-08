@@ -7,6 +7,11 @@ from .utils import TYPE, get_adaptive_threshold, prepare_data
 
 
 class _BaseHandler:
+    """Base class for all metric handlers.
+
+    Provides common functionality for calculating various segmentation metrics.
+    """
+
     def __init__(
         self,
         with_dynamic: bool,
@@ -35,11 +40,31 @@ class _BaseHandler:
             self.binary_results = None
 
     @abc.abstractmethod
-    def __call__(self, *args, **kwds):
+    def __call__(self, tp, fp, tn, fn):
+        """Calculate the metric value.
+
+        Args:
+            tp: True positive count(s)
+            fp: False positive count(s)
+            tn: True negative count(s)
+            fn: False negative count(s)
+
+        Returns:
+            Calculated metric value(s)
+        """
         pass
 
     @staticmethod
     def divide(numerator, denominator):
+        """Safe division with numpy arrays handling zero denominators.
+
+        Args:
+            numerator: Numerator value(s)
+            denominator: Denominator value(s)
+
+        Returns:
+            Result of division with zero handling
+        """
         denominator = np.array(denominator, dtype=TYPE)
         np.divide(numerator, denominator, out=denominator, where=denominator != 0)
         return denominator
@@ -225,10 +250,10 @@ class FmeasureHandler(_BaseHandler):
         self.recall = RecallHandler(False, False)
 
     def __call__(self, tp, fp, tn, fn):
-        # 为了对齐原始实现，这里不使用合并后的形式，仍然基于Precision和Recall的方式计算。
-        # numerator = (self.beta + 1) * tp
-        # denominator = (self.beta + 1) * tp + self.beta * fn + fp
-
+        """
+        Note:
+            Uses separate precision and recall calculations to maintain consistency with original implementation rather than combined formula.
+        """
         p = self.precision(tp, fp, tn, fn)
         r = self.recall(tp, fp, tn, fn)
         return self.divide((self.beta + 1) * p * r, self.beta * p + r)
