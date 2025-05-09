@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import ndimage
 
-from .utils import TYPE, get_adaptive_threshold, prepare_data
+from .utils import TYPE, get_adaptive_threshold, validate_and_normalize_input
 
 
 class MSIoU:
@@ -139,19 +139,7 @@ class MSIoU:
         Returns:
             The MSIoU score for the given pair (float between 0 and 1).
         """
-        # Validate input
-        if pred.shape != gt.shape:
-            raise ValueError(f"Shape mismatch: pred {pred.shape} vs gt {gt.shape}")
-
-        if normalize:
-            pred, gt = prepare_data(pred, gt)
-        else:
-            if not (pred.dtype in [np.float32, np.float64] and 0 <= pred.min() <= pred.max() <= 1):
-                raise ValueError(
-                    "Please make sure the array `pred` is normalized in [0, 1] with dtype float32 or float64."
-                )
-            if gt.dtype != bool:
-                raise ValueError("Please make sure the array `gt` is binary.")
+        pred, gt = validate_and_normalize_input(pred, gt, normalize)
 
         # Calculate MSIoU for this pair and store the result
         gt_edge = self.get_edge(gt)

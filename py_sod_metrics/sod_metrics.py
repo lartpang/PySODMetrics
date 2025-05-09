@@ -5,7 +5,7 @@ import numpy as np
 from scipy.ndimage import convolve
 from scipy.ndimage import distance_transform_edt as bwdist
 
-from .utils import EPS, TYPE, get_adaptive_threshold, prepare_data
+from .utils import EPS, TYPE, get_adaptive_threshold, validate_and_normalize_input
 
 
 class Fmeasure(object):
@@ -34,14 +34,15 @@ class Fmeasure(object):
         self.adaptive_fms = []
         self.changeable_fms = []
 
-    def step(self, pred: np.ndarray, gt: np.ndarray):
+    def step(self, pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
         """Statistics the metric for the pair of pred and gt.
 
         Args:
-            pred (np.uint8): Prediction, gray scale image.
-            gt (np.uint8): Ground truth, gray scale image.
+            pred (np.ndarray): Prediction, gray scale image.
+            gt (np.ndarray): Ground truth, gray scale image.
+            normalize (bool, optional): Whether to normalize the input data. Defaults to True.
         """
-        pred, gt = prepare_data(pred, gt)
+        pred, gt = validate_and_normalize_input(pred, gt, normalize)
 
         adaptive_fm = self.cal_adaptive_fm(pred=pred, gt=gt)
         self.adaptive_fms.append(adaptive_fm)
@@ -137,14 +138,15 @@ class MAE(object):
         """
         self.maes = []
 
-    def step(self, pred: np.ndarray, gt: np.ndarray):
+    def step(self, pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
         """Statistics the metric for the pair of pred and gt.
 
         Args:
-            pred (np.uint8): Prediction, gray scale image.
-            gt (np.uint8): Ground truth, gray scale image.
+            pred (np.ndarray): Prediction, gray scale image.
+            gt (np.ndarray): Ground truth, gray scale image.
+            normalize (bool, optional): Whether to normalize the input data. Defaults to True.
         """
-        pred, gt = prepare_data(pred, gt)
+        pred, gt = validate_and_normalize_input(pred, gt, normalize)
 
         mae = self.cal_mae(pred, gt)
         self.maes.append(mae)
@@ -188,14 +190,15 @@ class Smeasure(object):
         self.sms = []
         self.alpha = alpha
 
-    def step(self, pred: np.ndarray, gt: np.ndarray):
+    def step(self, pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
         """Statistics the metric for the pair of pred and gt.
 
         Args:
-            pred (np.uint8): Prediction, gray scale image.
-            gt (np.uint8): Ground truth, gray scale image.
+            pred (np.ndarray): Prediction, gray scale image.
+            gt (np.ndarray): Ground truth, gray scale image.
+            normalize (bool, optional): Whether to normalize the input data. Defaults to True.
         """
-        pred, gt = prepare_data(pred=pred, gt=gt)
+        pred, gt = validate_and_normalize_input(pred, gt, normalize)
 
         sm = self.cal_sm(pred, gt)
         self.sms.append(sm)
@@ -310,14 +313,16 @@ class Emeasure(object):
         self.adaptive_ems = []
         self.changeable_ems = []
 
-    def step(self, pred: np.ndarray, gt: np.ndarray):
+    def step(self, pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
         """Statistics the metric for the pair of pred and gt.
 
         Args:
-            pred (np.uint8): Prediction, gray scale image.
-            gt (np.uint8): Ground truth, gray scale image.
+            pred (np.ndarray): Prediction, gray scale image.
+            gt (np.ndarray): Ground truth, gray scale image.
+            normalize (bool, optional): Whether to normalize the input data. Defaults to True.
         """
-        pred, gt = prepare_data(pred=pred, gt=gt)
+        pred, gt = validate_and_normalize_input(pred, gt, normalize)
+
         self.gt_fg_numel = np.count_nonzero(gt)
         self.gt_size = gt.shape[0] * gt.shape[1]
 
@@ -485,14 +490,15 @@ class WeightedFmeasure(object):
         self.beta = beta
         self.weighted_fms = []
 
-    def step(self, pred: np.ndarray, gt: np.ndarray):
+    def step(self, pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
         """Statistics the metric for the pair of pred and gt.
 
         Args:
-            pred (np.uint8): Prediction, gray scale image.
-            gt (np.uint8): Ground truth, gray scale image.
+            pred (np.ndarray): Prediction, gray scale image.
+            gt (np.ndarray): Ground truth, gray scale image.
+            normalize (bool, optional): Whether to normalize the input data. Defaults to True.
         """
-        pred, gt = prepare_data(pred=pred, gt=gt)
+        pred, gt = validate_and_normalize_input(pred, gt, normalize)
 
         if np.all(~gt):
             wfm = 0

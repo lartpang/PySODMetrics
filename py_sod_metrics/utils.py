@@ -5,6 +5,30 @@ EPS = np.spacing(1)
 TYPE = np.float64
 
 
+def validate_and_normalize_input(pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
+    """Performs input validation and normalization."""
+    # Validate input shapes
+    if pred.shape != gt.shape:
+        raise ValueError(
+            f"Shape mismatch between prediction ({pred.shape}) and ground truth ({gt.shape})"
+        )
+
+    # Handle normalization
+    if normalize:
+        pred, gt = prepare_data(pred, gt)
+    else:
+        # Validate prediction data type and range
+        if pred.dtype not in (np.float32, np.float64):
+            raise TypeError(f"Prediction array must be float32 or float64, got {pred.dtype}")
+        if not (0 <= pred.min() and pred.max() <= 1):
+            raise ValueError("Prediction values must be in range [0, 1]")
+        # Validate ground truth type
+        if gt.dtype != bool:
+            raise TypeError(f"Ground truth must be boolean, got {gt.dtype}")
+
+    return pred, gt
+
+
 def prepare_data(pred: np.ndarray, gt: np.ndarray) -> tuple:
     """A numpy-based function for preparing `pred` and `gt`.
 

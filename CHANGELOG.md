@@ -12,3 +12,8 @@
 - [FEATURE] Add `binary`, `dinamic`, and `adaptive` modes for `py_sod_metrics/multiscale_iou.py`.
 - [UPDATE] Update `examples/test_metrics.py` to support `binary`, `dinamic`, and `adaptive` modes of `MSIoU`.
 - [NOTE] The current implementation of the dynamic mode for `MSIoU` relies on the for loop, so it currently runs less efficiently.
+
+## [1.4.4] - 2025-5-9
+
+- [FEATURE] Add `normalize` parameter to `py_sod_metrics/sod_metrics.py`.
+- [UPDATE] Update a unified function `validate_and_normalize_input` to validate and normalize the input data.

@@ -3,7 +3,7 @@ import abc
 
 import numpy as np
 
-from .utils import TYPE, get_adaptive_threshold, prepare_data
+from .utils import TYPE, get_adaptive_threshold, validate_and_normalize_input
 
 
 class _BaseHandler:
@@ -343,24 +343,11 @@ class FmeasureV2:
             pred (np.ndarray): Prediction, gray scale image.
             gt (np.ndarray): Ground truth, gray scale image.
             normalize (bool, optional): Whether to normalize the input data. Defaults to True.
-
-        Raises:
-            ValueError: Please add your metric handler before using `step()`.
-            ValueError: Please make sure the array `pred` is normalized in [0, 1].
-            ValueError: Please make sure the array `gt` is binary.
         """
         if not self._metric_handlers:  # 没有添加metric_handler
             raise ValueError("Please add your metric handler before using `step()`.")
 
-        if normalize:
-            pred, gt = prepare_data(pred, gt)
-        else:
-            if not (pred.dtype in [np.float32, np.float64] and 0 <= pred.min() <= pred.max() <= 1):
-                raise ValueError(
-                    "Please make sure the array `pred` is normalized in [0, 1] with dtype float32 or float64."
-                )
-            if gt.dtype != bool:
-                raise ValueError("Please make sure the array `gt` is binary.")
+        pred, gt = validate_and_normalize_input(pred, gt, normalize)
 
         FG = np.count_nonzero(gt)  # 真实前景, FG=(TPs+FNs)
         BG = gt.size - FG  # 真实背景, BG=(TNs+FPs)
