@@ -34,6 +34,10 @@ def reduce_dynamic_results_for_max_avg(dynamic_results: list):  # Nx[T'x256] -> 
 def reduce_dynamic_results_for_auc(ys: list, xs: list):  # Nx[T'x256] -> Nx[T'] -> N -> 1
     auc_results = []
     for y, x in zip(ys, xs):
+        # NOTE: before calculate the auc, we need to flip the y and x to corresponding to ascending thresholds
+        # because the dynamic results from our metrics is based on the descending order of thresholds, i.e., >=255,>=254,...>=1,>=0
+        y = np.flip(y, -1)
+        x = np.flip(x, -1)
         auc_results.append(cal_auc(y=y, x=x).mean())
     return np.asarray(auc_results).mean()
 
@@ -230,14 +234,18 @@ class CheckMetricTestCase(unittest.TestCase):
         pr_pre = fmv2["pre"]["dynamic"]  # 256
         pr_rec = fmv2["rec"]["dynamic"]  # 256
         roc_fpr = fmv2["fpr"]["dynamic"]  # tpr is the same as recall
-        cls.curr_results["auc_pr"] = cal_auc(y=pr_pre, x=pr_rec)
-        cls.curr_results["auc_roc"] = cal_auc(y=pr_rec, x=roc_fpr)
+        cls.curr_results["auc_pr"] = cal_auc(y=np.flip(pr_pre, -1), x=np.flip(pr_rec, -1))
+        cls.curr_results["auc_roc"] = cal_auc(y=np.flip(pr_rec, -1), x=np.flip(roc_fpr, -1))
 
         si_overall_pr_pre = si_fmv2["si_overall_pre"]["dynamic"]  # 256
         si_overall_pr_rec = si_fmv2["si_overall_rec"]["dynamic"]  # 256
         si_overall_roc_fpr = si_fmv2["si_overall_fpr"]["dynamic"]  # 256
-        cls.curr_results["si_overall_auc_pr"] = cal_auc(y=si_overall_pr_pre, x=si_overall_pr_rec)
-        cls.curr_results["si_overall_auc_roc"] = cal_auc(y=si_overall_pr_rec, x=si_overall_roc_fpr)
+        cls.curr_results["si_overall_auc_pr"] = cal_auc(
+            y=np.flip(si_overall_pr_pre, -1), x=np.flip(si_overall_pr_rec, -1)
+        )
+        cls.curr_results["si_overall_auc_roc"] = cal_auc(
+            y=np.flip(si_overall_pr_rec, -1), x=np.flip(si_overall_roc_fpr, -1)
+        )
 
         si_sample_pr_pre = si_fmv2["si_sample_pre"]["dynamic"]  # Nx[T'x256]
         si_sample_pr_rec = si_fmv2["si_sample_rec"]["dynamic"]  # Nx[T'x256]

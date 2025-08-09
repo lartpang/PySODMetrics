@@ -148,6 +148,10 @@ BINARY_METRIC_MAPPING = {
 SIZEINVARIANCE_METRIC_MAPPING = {
     "handler":{
         "si_fm": {"handler": py_sod_metrics.FmeasureHandler, "kwargs": dict(**sample_gray, beta=0.3)},
+        "si_pre": {"handler": py_sod_metrics.PrecisionHandler, "kwargs": dict(with_adaptive=False, with_dynamic=True, sample_based=True)},
+        "si_rec": {"handler": py_sod_metrics.RecallHandler, "kwargs": dict(with_adaptive=False, with_dynamic=True, sample_based=True)},
+        "si_tpr": {"handler": py_sod_metrics.TPRHandler, "kwargs": dict(with_adaptive=False, with_dynamic=True, sample_based=True)},
+        "si_fpr": {"handler": py_sod_metrics.FPRHandler, "kwargs": dict(with_adaptive=False, with_dynamic=True, sample_based=True)},
     },
     "si_fmeasurev2": py_sod_metrics.SizeInvarianceFmeasureV2,
     "si_mae": py_sod_metrics.SizeInvarianceMAE,
@@ -319,6 +323,12 @@ class TargetwiseGrayscaleMetricRecorderV2:
         for m_obj in self.metric_objs.values():
             m_obj.step(pre, gt)
 
+    def cal_auc(self, y, x):
+        sorted_idx = np.argsort(x, axis=-1, kind="stable")
+        x = np.take_along_axis(x, sorted_idx, axis=-1)
+        y = np.take_along_axis(y, sorted_idx, axis=-1)
+        return np.trapz(y, x, axis=-1)
+
     def get_all_results(self, num_bits: int = 3, return_ndarray: bool = False) -> dict:
         sequential_results = {}
         numerical_results = {}
@@ -326,6 +336,36 @@ class TargetwiseGrayscaleMetricRecorderV2:
             info = m_obj.get_results()
 
             if m_name == "si_fmeasurev2":
+                # AUC-ROC
+                if "si_tpr" in info and "si_fpr" in info:
+                    ys = info.pop("si_tpr")["dynamic"]  # >=255,>=254,...>=1,>=0
+                    xs = info.pop("si_fpr")["dynamic"]
+                    if isinstance(ys, list) and isinstance(xs, list):  # Nx[T'x256]
+                        auc_results = []
+                        for y, x in zip(ys, xs):
+                            # NOTE: before calculate the auc, we need to flip the y and x to corresponding to ascending thresholds
+                            # because the dynamic results from our metrics is based on the descending order of thresholds, i.e., >=255,>=254,...>=1,>=0
+                            y = np.flip(y, axis=-1)
+                            x = np.flip(x, axis=-1)
+                            auc_results.append(self.cal_auc(y, x).mean())
+                        numerical_results["si_sample_auc_roc"] = np.asarray(auc_results).mean()
+                    else:  # 256
+                        numerical_results["si_overall_auc_roc"] = self.cal_auc(y=ys, x=xs).mean()
+
+                # AUC-PR
+                if "si_pre" in info and "si_rec" in info:
+                    ys = info.pop("si_pre")["dynamic"]  # >=255,>=254,...>=1,>=0
+                    xs = info.pop("si_rec")["dynamic"]
+                    if isinstance(ys, list) and isinstance(xs, list):  # Nx[T'x256]
+                        auc_results = []
+                        for y, x in zip(ys, xs):
+                            y = np.flip(y, axis=-1)
+                            x = np.flip(x, axis=-1)
+                            auc_results.append(self.cal_auc(y, x).mean())
+                        numerical_results["si_sample_auc_pr"] = np.asarray(auc_results).mean()
+                    else:  # 256
+                        numerical_results["si_overall_auc_pr"] = self.cal_auc(y=ys, x=xs).mean()
+
                 for _name, results in info.items():
                     dynamic_results = results.get("dynamic")
                     if dynamic_results is not None:
@@ -338,17 +378,17 @@ class TargetwiseGrayscaleMetricRecorderV2:
                                 avg_results.append(s.mean(axis=-1).mean())  # 1
                                 seq_results.append(s.mean(axis=0))  # 256
                             seq_results = np.mean(np.asarray(seq_results), axis=0)
-                            numerical_results[f"max{_name}"] = np.asarray(max_results).mean()
-                            numerical_results[f"avg{_name}"] = np.asarray(avg_results).mean()
+                            numerical_results[f"si_sample_max{_name}"] = np.asarray(max_results).mean()
+                            numerical_results[f"si_sample_avg{_name}"] = np.asarray(avg_results).mean()
                         else:  # 256
                             seq_results = dynamic_results
-                            numerical_results[f"max{_name}"] = dynamic_results.max()
-                            numerical_results[f"avg{_name}"] = dynamic_results.mean()
+                            numerical_results[f"si_overall_max{_name}"] = dynamic_results.max()
+                            numerical_results[f"si_overall_avg{_name}"] = dynamic_results.mean()
                         sequential_results[_name] = np.flip(seq_results)
 
                     adaptive_results = results.get("adaptive")
                     if adaptive_results is not None:
-                        numerical_results[f"adp{_name}"] = adaptive_results
+                        numerical_results[f"si_sample_adp{_name}"] = adaptive_results
             else:
                 results = info[m_name]
                 if m_name in ("si_mae",):
