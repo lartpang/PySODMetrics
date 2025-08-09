@@ -28,27 +28,32 @@ Your improvements and suggestions are welcome.
 
 ### Supported Metrics
 
-| Metric                                    | Sample-based    | Whole-based | Related Class                         |
-| ----------------------------------------- | --------------- | ----------- | ------------------------------------- |
-| MAE                                       | soft            |             | `MAE`                                 |
-| S-measure $S_{m}$                         | soft            |             | `Smeasure`                            |
-| weighted F-measure ($F^{\omega}_{\beta}$) | soft            |             | `WeightedFmeasure`                    |
-| Multi-Scale IoU                           | max,avg,adp,bin |             | `MSIoU`                               |
-| E-measure ($E_{m}$)                       | max,avg,adp     |             | `Emeasure`                            |
-| F-measure (old) ($F_{beta}$)              | max,avg,adp     |             | `Fmeasure` (Will be removed!)         |
-| F-measure (new) ($F_{beta}$, $F_{1}$)     | max,avg,adp,bin | bin         | `FmeasureV2`+`FmeasureHandler`        |
-| BER                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`BERHandler`             |
-| Dice                                      | max,avg,adp,bin | bin         | `FmeasureV2`+`DICEHandler`            |
-| FPR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`FPRHandler`             |
-| IoU                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`IOUHandler`             |
-| Kappa                                     | max,avg,adp,bin | bin         | `FmeasureV2`+`KappaHandler`           |
-| Overall Accuracy                          | max,avg,adp,bin | bin         | `FmeasureV2`+`OverallAccuracyHandler` |
-| Precision                                 | max,avg,adp,bin | bin         | `FmeasureV2`+`PrecisionHandler`       |
-| Recall                                    | max,avg,adp,bin | bin         | `FmeasureV2`+`RecallHandler`          |
-| Sensitivity                               | max,avg,adp,bin | bin         | `FmeasureV2`+`SensitivityHandler`     |
-| Specificity                               | max,avg,adp,bin | bin         | `FmeasureV2`+`SpecificityHandler`     |
-| TNR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`TNRHandler`             |
-| TPR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`TPRHandler`             |
+| Metric                                    | Sample-based                                | Whole-based              | Related Class                         |
+| ----------------------------------------- | ------------------------------------------- | ------------------------ | ------------------------------------- |
+| MAE                                       | soft,si-soft                                |                          | `MAE`                                 |
+| S-measure $S_{m}$                         | soft                                        |                          | `Smeasure`                            |
+| weighted F-measure ($F^{\omega}_{\beta}$) | soft                                        |                          | `WeightedFmeasure`                    |
+| Multi-Scale IoU                           | max,avg,adp,bin                             |                          | `MSIoU`                               |
+| E-measure ($E_{m}$)                       | max,avg,adp                                 |                          | `Emeasure`                            |
+| F-measure (old) ($F_{beta}$)              | max,avg,adp                                 |                          | `Fmeasure` (Will be removed!)         |
+| F-measure (new) ($F_{beta}$, $F_{1}$)     | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`FmeasureHandler`        |
+| BER                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`BERHandler`             |
+| Dice                                      | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`DICEHandler`            |
+| FPR                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`FPRHandler`             |
+| IoU                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`IOUHandler`             |
+| Kappa                                     | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`KappaHandler`           |
+| Overall Accuracy                          | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`OverallAccuracyHandler` |
+| Precision                                 | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`PrecisionHandler`       |
+| Recall                                    | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`RecallHandler`          |
+| Sensitivity                               | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`SensitivityHandler`     |
+| Specificity                               | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`SpecificityHandler`     |
+| TNR                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`TNRHandler`             |
+| TPR                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`TPRHandler`             |
+
+**NOTE**:
+- Sample-based `si-` variants calculate the sample-specific mean/maximum based on the sample-based fm sequence with a shape of `(num_targets, 256)`.
+- Whole-based `si-` variants calculate the mean/maximum based on the average fm sequence across all targets from all samples.
+- Because the `*adp` variants are specialized for `sample-based` computation, they do not support whole-based computation.
 
 ## Usage
 
@@ -116,5 +121,12 @@ The core files are in the folder `py_sod_metrics`.
     author = {Ahmadzadeh, Azim and Kempton, Dustin J. and Chen, Yang and Angryk, Rafal A.},
     booktitle = ICIP,
     year = {2021},
+}
+
+@inproceedings{SizeInvarianceVariants,
+  title = {Size-invariance Matters: Rethinking Metrics and Losses for Imbalanced Multi-object Salient Object Detection},
+  author = {Feiran Li and Qianqian Xu and Shilong Bao and Zhiyong Yang and Runmin Cong and Xiaochun Cao and Qingming Huang},
+  booktitle = ICML,
+  year = {2024}
 }
 ```

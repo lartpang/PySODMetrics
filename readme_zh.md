@@ -27,27 +27,32 @@
 
 ### 支持的指标
 
-| Metric                                    | Sample-based    | Whole-based | Related Class                         |
-| ----------------------------------------- | --------------- | ----------- | ------------------------------------- |
-| MAE                                       | soft            |             | `MAE`                                 |
-| S-measure $S_{m}$                         | soft            |             | `Smeasure`                            |
-| weighted F-measure ($F^{\omega}_{\beta}$) | soft            |             | `WeightedFmeasure`                    |
-| Multi-Scale IoU                           | max,avg,adp,bin |             | `MSIoU`                               |
-| E-measure ($E_{m}$)                       | max,avg,adp     |             | `Emeasure`                            |
-| F-measure (old) ($F_{beta}$)              | max,avg,adp     |             | `Fmeasure`                            |
-| F-measure (new) ($F_{beta}$, $F_{1}$)     | max,avg,adp,bin | bin         | `FmeasureV2`+`FmeasureHandler`        |
-| BER                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`BERHandler`             |
-| Dice                                      | max,avg,adp,bin | bin         | `FmeasureV2`+`DICEHandler`            |
-| FPR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`FPRHandler`             |
-| IoU                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`IOUHandler`             |
-| Kappa                                     | max,avg,adp,bin | bin         | `FmeasureV2`+`KappaHandler`           |
-| Overall Accuracy                          | max,avg,adp,bin | bin         | `FmeasureV2`+`OverallAccuracyHandler` |
-| Precision                                 | max,avg,adp,bin | bin         | `FmeasureV2`+`PrecisionHandler`       |
-| Recall                                    | max,avg,adp,bin | bin         | `FmeasureV2`+`RecallHandler`          |
-| Sensitivity                               | max,avg,adp,bin | bin         | `FmeasureV2`+`SensitivityHandler`     |
-| Specificity                               | max,avg,adp,bin | bin         | `FmeasureV2`+`SpecificityHandler`     |
-| TNR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`TNRHandler`             |
-| TPR                                       | max,avg,adp,bin | bin         | `FmeasureV2`+`TPRHandler`             |
+| Metric                                    | Sample-based                                | Whole-based              | Related Class                         |
+| ----------------------------------------- | ------------------------------------------- | ------------------------ | ------------------------------------- |
+| MAE                                       | soft,si                                     |                          | `MAE`                                 |
+| S-measure $S_{m}$                         | soft                                        |                          | `Smeasure`                            |
+| weighted F-measure ($F^{\omega}_{\beta}$) | soft                                        |                          | `WeightedFmeasure`                    |
+| Multi-Scale IoU                           | max,avg,adp,bin                             |                          | `MSIoU`                               |
+| E-measure ($E_{m}$)                       | max,avg,adp                                 |                          | `Emeasure`                            |
+| F-measure (old) ($F_{beta}$)              | max,avg,adp                                 |                          | `Fmeasure` (Will be removed!)         |
+| F-measure (new) ($F_{beta}$, $F_{1}$)     | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`FmeasureHandler`        |
+| BER                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`BERHandler`             |
+| Dice                                      | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`DICEHandler`            |
+| FPR                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`FPRHandler`             |
+| IoU                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`IOUHandler`             |
+| Kappa                                     | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`KappaHandler`           |
+| Overall Accuracy                          | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`OverallAccuracyHandler` |
+| Precision                                 | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`PrecisionHandler`       |
+| Recall                                    | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`RecallHandler`          |
+| Sensitivity                               | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`SensitivityHandler`     |
+| Specificity                               | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`SpecificityHandler`     |
+| TNR                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`TNRHandler`             |
+| TPR                                       | max,avg,adp,bin,si-max,si-avg,si-adp,si-bin | bin,si-max,si-avg,si-bin | `FmeasureV2`+`TPRHandler`             |
+
+**注意**：
+- 基于样本（Sample-based）的 `si-` 变体会根据形状为 `(num_targets, 256)` 的样本级 `fm` 序列，计算每个样本的均值/最大值。
+- 基于整体（Whole-based）的 `si-` 变体会在跨所有样本的所有目标的平均 `fm` 序列上计算均值/最大值。
+- 由于 `*adp` 变体是专门为 `sample-based` 计算设计的，因此不支持基于整体（whole-based）的计算方式。
 
 ## 使用
 
@@ -115,5 +120,12 @@
     author = {Ahmadzadeh, Azim and Kempton, Dustin J. and Chen, Yang and Angryk, Rafal A.},
     booktitle = ICIP,
     year = {2021},
+}
+
+@inproceedings{SizeInvarianceVariants,
+  title = {Size-invariance Matters: Rethinking Metrics and Losses for Imbalanced Multi-object Salient Object Detection},
+  author = {Feiran Li and Qianqian Xu and Shilong Bao and Zhiyong Yang and Runmin Cong and Xiaochun Cao and Qingming Huang},
+  booktitle = ICML,
+  year = {2024}
 }
 ```

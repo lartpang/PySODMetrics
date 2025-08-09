@@ -7,8 +7,8 @@ packages = ["py_sod_metrics"] # 直接指定包名
 
 [project]
 name = "pysodmetrics"
-version = "1.4.4"
-dependencies = ["numpy~=1.18.0", "scipy~=1.5.0"]
+version = "1.5.0"
+dependencies = ["numpy>=1.18,<2.0", "scipy>=1.5,<2.0"]
 requires-python = ">=3.6"
 authors = [{ name = "lartpang", email = "lartpang@gmail.com" }]
 maintainers = [{ name = "lartpang", email = "lartpang@gmail.com" }]
@@ -47,7 +47,7 @@ filter_files = true
 supported_extensions = "py"
 
 [tool.black]
-line-length = 99
+line-length = 119
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -69,7 +69,7 @@ exclude = '''
 
 [tool.ruff]
 # Same as Black.
-line-length = 99
+line-length = 119
 indent-width = 4
 # Exclude a variety of commonly ignored directories.
 exclude = [

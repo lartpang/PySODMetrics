@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Time    : 2021/1/4
-# @Author  : Lart Pang
-# @GitHub  : https://github.com/lartpang
-
 import os
 import sys
 
@@ -150,21 +145,26 @@ BINARY_METRIC_MAPPING = {
     "overall_bioa": {"handler": py_sod_metrics.OverallAccuracyHandler, "kwargs": overall_bin},
     "overall_bikappa": {"handler": py_sod_metrics.KappaHandler, "kwargs": overall_bin},
 }
+SIZEINVARIANCE_METRIC_MAPPING = {
+    "handler":{
+        "si_fm": {"handler": py_sod_metrics.FmeasureHandler, "kwargs": dict(**sample_gray, beta=0.3)},
+    },
+    "si_fmeasurev2": py_sod_metrics.SizeInvarianceFmeasureV2,
+    "si_mae": py_sod_metrics.SizeInvarianceMAE,
+}
 # fmt: on
 
 
 class GrayscaleMetricRecorderV2:
-    suppoted_metrics = ["mae", "em", "sm", "wfm"] + sorted(GRAYSCALE_METRIC_MAPPING.keys())
+    supported_metrics = ["mae", "em", "sm", "wfm"] + sorted(GRAYSCALE_METRIC_MAPPING.keys())
 
     def __init__(self, metric_names=("sm", "wfm", "mae", "fmeasure", "em")):
         """
         用于统计各种指标的类，支持更多的指标，更好的兼容性。
         """
         if not metric_names:
-            metric_names = self.suppoted_metrics
-        assert all(
-            [m in self.suppoted_metrics for m in metric_names]
-        ), f"Only support: {self.suppoted_metrics}"
+            metric_names = self.supported_metrics
+        assert all([m in self.supported_metrics for m in metric_names]), f"Only support: {self.supported_metrics}"
 
         self.metric_objs = {}
         has_existed = False
@@ -231,17 +231,15 @@ class GrayscaleMetricRecorderV2:
 
 
 class BinaryMetricRecorder:
-    suppoted_metrics = ["mae", "sm", "wfm"] + sorted(BINARY_METRIC_MAPPING.keys())
+    supported_metrics = ["mae", "sm", "wfm"] + sorted(BINARY_METRIC_MAPPING.keys())
 
     def __init__(self, metric_names=("bif1", "biprecision", "birecall", "biiou")):
         """
         用于统计各种指标的类，主要适用于对单通道灰度图计算二值图像的指标。
         """
         if not metric_names:
-            metric_names = self.suppoted_metrics
-        assert all(
-            [m in self.suppoted_metrics for m in metric_names]
-        ), f"Only support: {self.suppoted_metrics}"
+            metric_names = self.supported_metrics
+        assert all([m in self.supported_metrics for m in metric_names]), f"Only support: {self.supported_metrics}"
 
         self.metric_objs = {}
         has_existed = False
@@ -291,6 +289,84 @@ class BinaryMetricRecorder:
         return self.get_all_results(num_bits=num_bits, return_ndarray=return_ndarray)["numerical"]
 
 
+class TargetwiseGrayscaleMetricRecorderV2:
+    supported_metrics = ["si_mae"] + sorted(SIZEINVARIANCE_METRIC_MAPPING["handler"].keys())
+
+    def __init__(self, metric_names=("si_mae",)):
+        if not metric_names:
+            metric_names = self.supported_metrics
+        assert all([m in self.supported_metrics for m in metric_names]), f"Only support: {self.supported_metrics}"
+
+        self.metric_objs = {}
+        has_existed = False
+        for metric_name in metric_names:
+            if metric_name in SIZEINVARIANCE_METRIC_MAPPING["handler"]:
+                if not has_existed:  # only init once
+                    self.metric_objs["si_fmeasurev2"] = SIZEINVARIANCE_METRIC_MAPPING["si_fmeasurev2"]()
+                    has_existed = True
+                metric_handler = SIZEINVARIANCE_METRIC_MAPPING["handler"][metric_name]
+                self.metric_objs["si_fmeasurev2"].add_handler(
+                    handler_name=metric_name,
+                    metric_handler=metric_handler["handler"](**metric_handler["kwargs"]),
+                )
+            else:
+                self.metric_objs[metric_name] = SIZEINVARIANCE_METRIC_MAPPING[metric_name]()
+
+    def step(self, pre: np.ndarray, gt: np.ndarray):
+        assert pre.shape == gt.shape, (pre.shape, gt.shape)
+        assert pre.dtype == gt.dtype == np.uint8, (pre.dtype, gt.dtype)
+
+        for m_obj in self.metric_objs.values():
+            m_obj.step(pre, gt)
+
+    def get_all_results(self, num_bits: int = 3, return_ndarray: bool = False) -> dict:
+        sequential_results = {}
+        numerical_results = {}
+        for m_name, m_obj in self.metric_objs.items():
+            info = m_obj.get_results()
+
+            if m_name == "si_fmeasurev2":
+                for _name, results in info.items():
+                    dynamic_results = results.get("dynamic")
+                    if dynamic_results is not None:
+                        if isinstance(dynamic_results, list):  # Nx[T'x256]
+                            max_results = []
+                            avg_results = []
+                            seq_results = []
+                            for s in dynamic_results:
+                                max_results.append(s.max(axis=-1).mean())  # 1
+                                avg_results.append(s.mean(axis=-1).mean())  # 1
+                                seq_results.append(s.mean(axis=0))  # 256
+                            seq_results = np.mean(np.asarray(seq_results), axis=0)
+                            numerical_results[f"max{_name}"] = np.asarray(max_results).mean()
+                            numerical_results[f"avg{_name}"] = np.asarray(avg_results).mean()
+                        else:  # 256
+                            seq_results = dynamic_results
+                            numerical_results[f"max{_name}"] = dynamic_results.max()
+                            numerical_results[f"avg{_name}"] = dynamic_results.mean()
+                        sequential_results[_name] = np.flip(seq_results)
+
+                    adaptive_results = results.get("adaptive")
+                    if adaptive_results is not None:
+                        numerical_results[f"adp{_name}"] = adaptive_results
+            else:
+                results = info[m_name]
+                if m_name in ("si_mae",):
+                    numerical_results[m_name] = results
+                else:
+                    raise NotImplementedError(m_name)
+
+        if num_bits is not None and isinstance(num_bits, int):
+            numerical_results = {k: v.round(num_bits) for k, v in numerical_results.items()}
+        if not return_ndarray:
+            sequential_results = ndarray_to_basetype(sequential_results)
+            numerical_results = ndarray_to_basetype(numerical_results)
+        return {"sequential": sequential_results, "numerical": numerical_results}
+
+    def show(self, num_bits: int = 3, return_ndarray: bool = False) -> dict:
+        return self.get_all_results(num_bits=num_bits, return_ndarray=return_ndarray)["numerical"]
+
+
 if __name__ == "__main__":
     data_root = "./test_data"
     mask_root = os.path.join(data_root, "masks")
@@ -298,12 +374,20 @@ if __name__ == "__main__":
     masks = [os.path.join(mask_root, f) for f in sorted(os.listdir(mask_root))]
     preds = [os.path.join(pred_root, f) for f in sorted(os.listdir(pred_root))]
 
-    metrics_v1 = GrayscaleMetricRecorderV2(metric_names=GrayscaleMetricRecorderV2.suppoted_metrics)
-    metrics_v2 = BinaryMetricRecorder(metric_names=BinaryMetricRecorder.suppoted_metrics)
+    metrics_v1 = GrayscaleMetricRecorderV2(metric_names=GrayscaleMetricRecorderV2.supported_metrics)
+    metrics_v2 = BinaryMetricRecorder(metric_names=BinaryMetricRecorder.supported_metrics)
+    metrics_v3 = TargetwiseGrayscaleMetricRecorderV2(
+        metric_names=TargetwiseGrayscaleMetricRecorderV2.supported_metrics
+    )
     for mask, pred in zip(masks, preds):
         mask = cv2.imread(mask, cv2.IMREAD_GRAYSCALE)
         pred = cv2.imread(pred, cv2.IMREAD_GRAYSCALE)
+        if pred.shape != mask.shape:
+            pred = cv2.resize(pred, dsize=mask.shape[::-1], interpolation=cv2.INTER_LINEAR)
+
         metrics_v1.step(pred, mask)
         metrics_v2.step(pred, mask)
+        metrics_v3.step(pred, mask)
     print(metrics_v1.show())
     print(metrics_v2.show())
+    print(metrics_v3.show())
