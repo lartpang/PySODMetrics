@@ -297,6 +297,12 @@
         "si_sample_meanoa": 0.9746901954959566,
         "si_sample_meanpre": 0.5903439300259663,
         "si_sample_meanrec": 0.4867701205434893,
-        "si_sample_meanspec": 0.9867863542667301
+        "si_sample_meanspec": 0.9867863542667301,
+        "auc_pr": 0.19452884849631813,
+        "auc_roc": 0.6468975503667292,
+        "si_overall_auc_pr": 0.3036500410380263,
+        "si_overall_auc_roc": 0.6192831970413093,
+        "si_sample_auc_pr": 0.3036500410380263,
+        "si_sample_auc_roc": 0.6192831970413093
     }
 }

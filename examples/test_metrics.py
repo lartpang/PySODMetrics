@@ -14,6 +14,30 @@ with open("./version_performance.json", encoding="utf-8", mode="r") as f:
     default_results = json.load(f)
 
 
+def cal_auc(y: np.ndarray, x: np.ndarray):
+    assert y.shape == x.shape, (y.shape, x.shape)
+    sorted_idx = np.argsort(x, axis=-1, kind="stable")
+    y = y[..., sorted_idx]
+    x = x[..., sorted_idx]
+    return np.trapz(y=y, x=x, axis=-1)
+
+
+def reduce_dynamic_results_for_max_avg(dynamic_results: list):  # Nx[T'x256] -> Nx[T'] -> N -> 1
+    max_results = []
+    avg_results = []
+    for s in dynamic_results:
+        max_results.append(s.max(axis=-1).mean())
+        avg_results.append(s.mean(axis=-1).mean())
+    return np.asarray(max_results).mean(), np.asarray(avg_results).mean()
+
+
+def reduce_dynamic_results_for_auc(ys: list, xs: list):  # Nx[T'x256] -> Nx[T'] -> N -> 1
+    auc_results = []
+    for y, x in zip(ys, xs):
+        auc_results.append(cal_auc(y=y, x=x).mean())
+    return np.asarray(auc_results).mean()
+
+
 class CheckMetricTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -180,7 +204,9 @@ class CheckMetricTestCase(unittest.TestCase):
         base_metrics = ["fm", "f1", "pre", "rec", "fpr", "iou", "dice", "spec", "ber", "oa", "kappa"]
         # fmt: on
         for m_name in base_metrics:
-            si_sample_max, si_sample_mean = cls._reduce_dynamic_results(si_fmv2[f"si_sample_{m_name}"]["dynamic"])
+            si_sample_max, si_sample_mean = reduce_dynamic_results_for_max_avg(
+                si_fmv2[f"si_sample_{m_name}"]["dynamic"]
+            )
             cls.curr_results.update(
                 {
                     # general form
@@ -201,24 +227,34 @@ class CheckMetricTestCase(unittest.TestCase):
                     f"si_sample_bi{m_name}": si_fmv2[f"si_sample_bi{m_name}"]["binary"],
                 }
             )
+        pr_pre = fmv2["pre"]["dynamic"]  # 256
+        pr_rec = fmv2["rec"]["dynamic"]  # 256
+        roc_fpr = fmv2["fpr"]["dynamic"]  # tpr is the same as recall
+        cls.curr_results["auc_pr"] = cal_auc(y=pr_pre, x=pr_rec)
+        cls.curr_results["auc_roc"] = cal_auc(y=pr_rec, x=roc_fpr)
+
+        si_overall_pr_pre = si_fmv2["si_overall_pre"]["dynamic"]  # 256
+        si_overall_pr_rec = si_fmv2["si_overall_rec"]["dynamic"]  # 256
+        si_overall_roc_fpr = si_fmv2["si_overall_fpr"]["dynamic"]  # 256
+        cls.curr_results["si_overall_auc_pr"] = cal_auc(y=si_overall_pr_pre, x=si_overall_pr_rec)
+        cls.curr_results["si_overall_auc_roc"] = cal_auc(y=si_overall_pr_rec, x=si_overall_roc_fpr)
+
+        si_sample_pr_pre = si_fmv2["si_sample_pre"]["dynamic"]  # Nx[T'x256]
+        si_sample_pr_rec = si_fmv2["si_sample_rec"]["dynamic"]  # Nx[T'x256]
+        si_sample_roc_fpr = si_fmv2["si_sample_fpr"]["dynamic"]  # Nx[T'x256]
+        cls.curr_results["si_sample_auc_pr"] = reduce_dynamic_results_for_auc(ys=si_sample_pr_pre, xs=si_sample_pr_rec)
+        cls.curr_results["si_sample_auc_roc"] = reduce_dynamic_results_for_auc(
+            ys=si_sample_pr_rec, xs=si_sample_roc_fpr
+        )
 
         print("Current results:")
         pprint(cls.curr_results)
-        base_metric_results = default_results["v1_4_3"]  # 68
-        si_variant_results = default_results["v1_5_0"]  # 78
-        assert not any([k in base_metric_results for k in si_variant_results.keys()]), (
-            "Some keys will be overwritten by the SI variant results."
-        )
-        cls.default_results = {**base_metric_results, **si_variant_results}
-
-    @staticmethod
-    def _reduce_dynamic_results(dynamic_results: list):  # Nx[T'x256] -> 256
-        max_results = []
-        avg_results = []
-        for s in dynamic_results:
-            max_results.append(s.max(axis=-1).mean())
-            avg_results.append(s.mean(axis=-1).mean())
-        return np.asarray(max_results).mean(), np.asarray(avg_results).mean()
+        cls.default_results = default_results["v1_4_3"]  # 68
+        si_variant_results = default_results["v1_5_0"]  # 78+6
+        for res in [si_variant_results]:
+            if any([k in cls.default_results for k in res.keys()]):
+                raise ValueError("Some keys will be overwritten by the SI variant results.")
+            cls.default_results.update(res)
 
     def test_sm(self):
         self.assertEqual(self.curr_results["Smeasure"], self.default_results["Smeasure"])
