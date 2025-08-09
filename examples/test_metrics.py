@@ -17,8 +17,8 @@ with open("./version_performance.json", encoding="utf-8", mode="r") as f:
 def cal_auc(y: np.ndarray, x: np.ndarray):
     assert y.shape == x.shape, (y.shape, x.shape)
     sorted_idx = np.argsort(x, axis=-1, kind="stable")
-    y = y[..., sorted_idx]
-    x = x[..., sorted_idx]
+    y = np.take_along_axis(y, sorted_idx, axis=-1)
+    x = np.take_along_axis(x, sorted_idx, axis=-1)
     return np.trapz(y=y, x=x, axis=-1)
 
 
