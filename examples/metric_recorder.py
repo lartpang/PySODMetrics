@@ -36,6 +36,7 @@ INDIVADUAL_METRIC_MAPPING = {
     "em": py_sod_metrics.Emeasure,
     "sm": py_sod_metrics.Smeasure,
     "wfm": py_sod_metrics.WeightedFmeasure,
+    "hce": py_sod_metrics.HumanCorrectionEffortMeasure,
 }
 
 
@@ -45,13 +46,14 @@ class GrayscaleMetricRecorderV1:
         用于统计各种指标的类
         https://github.com/lartpang/Py-SOD-VOS-EvalToolkit/blob/81ce89da6813fdd3e22e3f20e3a09fe1e4a1a87c/utils/recorders/metric_recorder.py
 
-        主要应用于旧版本实现中的五个指标，即mae/fm/sm/em/wfm。推荐使用V2版本。
+        主要应用于旧版本实现中的五个指标，即mae/fm/sm/em/wfm/hce。推荐使用V2版本。
         """
         self.mae = INDIVADUAL_METRIC_MAPPING["mae"]()
         self.fm = INDIVADUAL_METRIC_MAPPING["fm"]()
         self.sm = INDIVADUAL_METRIC_MAPPING["sm"]()
         self.em = INDIVADUAL_METRIC_MAPPING["em"]()
         self.wfm = INDIVADUAL_METRIC_MAPPING["wfm"]()
+        self.hce = INDIVADUAL_METRIC_MAPPING["hce"]()
 
     def step(self, pre: np.ndarray, gt: np.ndarray):
         assert pre.shape == gt.shape
@@ -63,6 +65,7 @@ class GrayscaleMetricRecorderV1:
         self.fm.step(pre, gt)
         self.em.step(pre, gt)
         self.wfm.step(pre, gt)
+        self.hce.step(pre, gt)
 
     def get_results(self, num_bits: int = 3, return_ndarray: bool = False) -> dict:
         """
@@ -78,6 +81,7 @@ class GrayscaleMetricRecorderV1:
         sm = self.sm.get_results()["sm"]
         em = self.em.get_results()["em"]
         mae = self.mae.get_results()["mae"]
+        hce = self.hce.get_results()["hce"]
 
         sequential_results = {
             "fm": np.flip(fm["curve"]),
@@ -95,6 +99,7 @@ class GrayscaleMetricRecorderV1:
             "avgF": fm["curve"].mean(),
             "adpF": fm["adp"],
             "wFm": wfm,
+            "HCE": hce,
         }
         if num_bits is not None and isinstance(num_bits, int):
             numerical_results = {k: v.round(num_bits) for k, v in numerical_results.items()}
@@ -160,7 +165,7 @@ SIZEINVARIANCE_METRIC_MAPPING = {
 
 
 class GrayscaleMetricRecorderV2:
-    supported_metrics = ["mae", "em", "sm", "wfm"] + sorted(GRAYSCALE_METRIC_MAPPING.keys())
+    supported_metrics = ["mae", "em", "sm", "wfm", "hce"] + sorted(GRAYSCALE_METRIC_MAPPING.keys())
 
     def __init__(self, metric_names=("sm", "wfm", "mae", "fmeasure", "em")):
         """
@@ -209,7 +214,7 @@ class GrayscaleMetricRecorderV2:
                         numerical_results[f"adp{_name}"] = adaptive_results
             else:
                 results = info[m_name]
-                if m_name in ("wfm", "sm", "mae"):
+                if m_name in ("wfm", "sm", "mae", "hce"):
                     numerical_results[m_name] = results
                 elif m_name in ("fm", "em"):
                     sequential_results[m_name] = np.flip(results["curve"])
@@ -235,7 +240,7 @@ class GrayscaleMetricRecorderV2:
 
 
 class BinaryMetricRecorder:
-    supported_metrics = ["mae", "sm", "wfm"] + sorted(BINARY_METRIC_MAPPING.keys())
+    supported_metrics = ["mae", "sm", "wfm", "hce"] + sorted(BINARY_METRIC_MAPPING.keys())
 
     def __init__(self, metric_names=("bif1", "biprecision", "birecall", "biiou")):
         """
@@ -278,7 +283,7 @@ class BinaryMetricRecorder:
                         numerical_results[_name] = binary_results
             else:
                 results = info[m_name]
-                if m_name in ("mae", "sm", "wfm"):
+                if m_name in ("mae", "sm", "wfm", "hce"):
                     numerical_results[m_name] = results
                 else:
                     raise NotImplementedError(m_name)

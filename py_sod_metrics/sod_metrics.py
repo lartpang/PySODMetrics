@@ -1,9 +1,10 @@
-# -*- coding: utf-8 -*-
 import warnings
 
+import cv2
 import numpy as np
 from scipy.ndimage import convolve
 from scipy.ndimage import distance_transform_edt as bwdist
+from skimage import measure, morphology
 
 from .utils import EPS, TYPE, get_adaptive_threshold, validate_and_normalize_input
 
@@ -380,9 +381,7 @@ class Emeasure(object):
             results_parts = []
             for i, (part_numel, combination) in enumerate(zip(parts_numel, combinations)):
                 align_matrix_value = (
-                    2
-                    * (combination[0] * combination[1])
-                    / (combination[0] ** 2 + combination[1] ** 2 + EPS)
+                    2 * (combination[0] * combination[1]) / (combination[0] ** 2 + combination[1] ** 2 + EPS)
                 )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts.append(enhanced_matrix_value * part_numel)
@@ -424,9 +423,7 @@ class Emeasure(object):
             results_parts = np.empty(shape=(4, 256), dtype=np.float64)
             for i, (part_numel, combination) in enumerate(zip(parts_numel_w_thrs, combinations)):
                 align_matrix_value = (
-                    2
-                    * (combination[0] * combination[1])
-                    / (combination[0] ** 2 + combination[1] ** 2 + EPS)
+                    2 * (combination[0] * combination[1]) / (combination[0] ** 2 + combination[1] ** 2 + EPS)
                 )
                 enhanced_matrix_value = (align_matrix_value + 1) ** 2 / 4
                 results_parts[i] = enhanced_matrix_value * part_numel
@@ -435,9 +432,7 @@ class Emeasure(object):
         em = enhanced_matrix_sum / (self.gt_size - 1 + EPS)
         return em
 
-    def generate_parts_numel_combinations(
-        self, fg_fg_numel, fg_bg_numel, pred_fg_numel, pred_bg_numel
-    ):
+    def generate_parts_numel_combinations(self, fg_fg_numel, fg_bg_numel, pred_fg_numel, pred_bg_numel):
         bg_fg_numel = self.gt_fg_numel - fg_fg_numel
         bg_bg_numel = pred_bg_numel - bg_fg_numel
 
@@ -571,3 +566,170 @@ class WeightedFmeasure(object):
         """
         weighted_fm = np.mean(np.array(self.weighted_fms, dtype=TYPE))
         return dict(wfm=weighted_fm)
+
+
+class HumanCorrectionEffortMeasure(object):
+    def __init__(self, relax: int = 5, epsilon: float = 2.0):
+        """Human Correction Effort Measure for Dichotomous Image Segmentation.
+
+        ```
+        @inproceedings{HumanCorrectionEffortMeasure,
+            title = {Highly Accurate Dichotomous Image Segmentation},
+            author = {Xuebin Qin and Hang Dai and Xiaobin Hu and Deng-Ping Fan and Ling Shao and Luc Van Gool},
+            booktitle = ECCV,
+            year = {2022}
+        }
+        ```
+        """
+
+        self.hces = []
+        self.relax = relax
+        self.epsilon = epsilon
+        self.morphology_kernel = morphology.disk(1)
+
+    def step(self, pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
+        """Statistics the metric for the pair of pred and gt.
+
+        Args:
+            pred (np.ndarray): Prediction, gray scale image.
+            gt (np.ndarray): Ground truth, gray scale image.
+            normalize (bool, optional): Whether to normalize the input data. Defaults to True.
+        """
+        pred, gt = validate_and_normalize_input(pred, gt, normalize)
+
+        hce = self.cal_hce(pred, gt)
+        self.hces.append(hce)
+
+    def cal_hce(self, pred: np.ndarray, gt: np.ndarray) -> float:
+        gt_skeleton = morphology.skeletonize(gt).astype(bool)
+        pred = pred > 0.5
+
+        union = np.logical_or(gt, pred)
+        TP = np.logical_and(gt, pred)
+        FP = np.logical_xor(pred, TP)
+        FN = np.logical_xor(gt, TP)
+
+        # relax the union of gt and pred
+        eroded_union = cv2.erode(union.astype(np.uint8), self.morphology_kernel, iterations=self.relax)
+
+        # get the relaxed FP regions for computing the human efforts in correcting them ---
+        FP_ = np.logical_and(FP, eroded_union)  # get the relaxed FP
+        for i in range(0, self.relax):
+            FP_ = cv2.dilate(FP_.astype(np.uint8), self.morphology_kernel)
+            FP_ = np.logical_and(FP_.astype(bool), ~gt)
+        FP_ = np.logical_and(FP, FP_)
+
+        # get the relaxed FN regions for computing the human efforts in correcting them ---
+        FN_ = np.logical_and(FN, eroded_union)  # preserve the structural components of FN
+        # recover the FN, where pixels are not close to the TP borders
+        for i in range(0, self.relax):
+            FN_ = cv2.dilate(FN_.astype(np.uint8), self.morphology_kernel)
+            FN_ = np.logical_and(FN_, ~pred)
+        FN_ = np.logical_and(FN, FN_)
+        # preserve the structural components of FN
+        FN_ = np.logical_or(FN_, np.logical_xor(gt_skeleton, np.logical_and(TP, gt_skeleton)))
+
+        # Find exact polygon control points and independent regions.
+        # find contours from FP_ and control points and independent regions for human correction
+        contours_FP, _ = cv2.findContours(FP_.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        condition_FP = np.logical_or(TP, FN_)
+        bdies_FP, indep_cnt_FP = self.filter_conditional_boundary(contours_FP, FP_, condition_FP)
+        # find contours from FN_ and control points and independent regions for human correction
+        contours_FN, _ = cv2.findContours(FN_.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        condition_FN = 1 - np.logical_or(np.logical_or(TP, FP_), FN_)
+        bdies_FN, indep_cnt_FN = self.filter_conditional_boundary(contours_FN, FN_, condition_FN)
+
+        poly_FP_point_cnt = self.count_polygon_control_points(bdies_FP, epsilon=self.epsilon)
+        poly_FN_point_cnt = self.count_polygon_control_points(bdies_FN, epsilon=self.epsilon)
+        return poly_FP_point_cnt + indep_cnt_FP + poly_FN_point_cnt + indep_cnt_FN
+
+    def filter_conditional_boundary(self, contours: list, mask: np.ndarray, condition: np.ndarray):
+        """
+        Filter boundary segments based on a given condition mask and compute
+        the number of independent connected regions that require human correction.
+
+        Args:
+            contours (List[np.ndarray]): List of boundary contours (OpenCV format).
+            mask (np.ndarray): Binary mask representing the region of interest.
+            condition (np.ndarray): Condition mask used to determine which
+                boundary points need to be considered.
+
+        Returns:
+            Tuple[List[np.ndarray], int]:
+                - boundaries (List[np.ndarray]): Filtered boundary segments that require correction.
+                - independent_count (int): Number of independent connected regions
+                that need correction (i.e., human editing effort).
+        """
+        condition = cv2.dilate(condition.astype(np.uint8), self.morphology_kernel)
+
+        labels = measure.label(mask)  # find the connected regions
+        independent_flags = np.ones(labels.max() + 1, dtype=int)  # the label of each connected regions
+        independent_flags[0] = 0  # 0 indicate the background region
+
+        boundaries = []
+        visited_map = np.zeros(condition.shape[:2], dtype=int)
+        for i in range(len(contours)):
+            temp_boundaries = []
+            temp_boundary = []
+            for pt in contours[i]:
+                row, col = pt[0, 1], pt[0, 0]
+
+                if condition[row, col].sum() == 0 or visited_map[row, col] != 0:
+                    if temp_boundary:  # if the previous point is not a boundary point, append the previous boundary
+                        temp_boundaries.append(temp_boundary)
+                        temp_boundary = []
+                    continue
+
+                temp_boundary.append([col, row])
+                visited_map[row, col] = visited_map[row, col] + 1
+                independent_flags[labels[row, col]] = 0  # mark region as requiring correction
+
+            if temp_boundary:
+                temp_boundaries.append(temp_boundary)
+
+            # check if the first and the last boundaries are connected.
+            # if yes, invert the first boundary and attach it after the last boundary
+            if len(temp_boundaries) > 1:
+                first_x, first_y = temp_boundaries[0][0]
+                last_x, last_y = temp_boundaries[-1][-1]
+                if (
+                    (abs(first_x - last_x) == 1 and first_y == last_y)
+                    or (first_x == last_x and abs(first_y - last_y) == 1)
+                    or (abs(first_x - last_x) == 1 and abs(first_y - last_y) == 1)
+                ):
+                    temp_boundaries[-1].extend(temp_boundaries[0][::-1])
+                    del temp_boundaries[0]
+
+            for k in range(len(temp_boundaries)):
+                temp_boundaries[k] = np.array(temp_boundaries[k])[:, np.newaxis, :]
+
+            if temp_boundaries:
+                boundaries.extend(temp_boundaries)
+        return boundaries, independent_flags.sum()
+
+    def count_polygon_control_points(self, boundaries: list, epsilon: float = 1.0) -> int:
+        """
+        Approximate each boundary using the Ramer-Douglas-Peucker (RDP) algorithm
+        and count the total number of control points of all approximated polygons.
+
+        Args:
+            boundaries (List[np.ndarray]): List of boundary contours.
+                Each contour is an Nx1x2 numpy array (OpenCV contour format).
+            epsilon (float): RDP approximation tolerance.
+                Larger values result in fewer control points.
+
+        Returns:
+            int: The total number of control points across all approximated polygons.
+
+        Reference:
+            https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
+        """
+        num_points = 0
+        for boundary in boundaries:
+            approx_poly = cv2.approxPolyDP(boundary, epsilon, False)  # approximate boundary
+            num_points += len(approx_poly)  # count vertices (control points)
+        return num_points
+
+    def get_results(self) -> dict:
+        hce = np.mean(np.array(self.hces, dtype=TYPE))
+        return dict(hce=hce)

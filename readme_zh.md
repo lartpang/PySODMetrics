@@ -32,6 +32,7 @@
 | MAE                                       | soft,si                                     |                          | `MAE`                                 |
 | S-measure $S_{m}$                         | soft                                        |                          | `Smeasure`                            |
 | weighted F-measure ($F^{\omega}_{\beta}$) | soft                                        |                          | `WeightedFmeasure`                    |
+| Human Correction Effort Measure           | soft                                        |                          | `HumanCorrectionEffortMeasure`        |
 | Multi-Scale IoU                           | max,avg,adp,bin                             |                          | `MSIoU`                               |
 | E-measure ($E_{m}$)                       | max,avg,adp                                 |                          | `Emeasure`                            |
 | F-measure (old) ($F_{beta}$)              | max,avg,adp                                 |                          | `Fmeasure` (Will be removed!)         |
@@ -127,5 +128,12 @@
   author = {Feiran Li and Qianqian Xu and Shilong Bao and Zhiyong Yang and Runmin Cong and Xiaochun Cao and Qingming Huang},
   booktitle = ICML,
   year = {2024}
+}
+
+@inproceedings{HumanCorrectionEffortMeasure,
+    title = {Highly Accurate Dichotomous Image Segmentation},
+    author = {Xuebin Qin and Hang Dai and Xiaobin Hu and Deng-Ping Fan and Ling Shao and Luc Van Gool},
+    booktitle = ECCV,
+    year = {2022}
 }
 ```

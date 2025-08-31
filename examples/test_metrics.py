@@ -50,6 +50,7 @@ class CheckMetricTestCase(unittest.TestCase):
         SM = py_sod_metrics.Smeasure()
         EM = py_sod_metrics.Emeasure()
         MAE = py_sod_metrics.MAE()
+        HCE = py_sod_metrics.HumanCorrectionEffortMeasure()
         MSIOU = py_sod_metrics.MSIoU(with_dynamic=True, with_adaptive=True, with_binary=True)
 
         # fmt: off
@@ -169,6 +170,7 @@ class CheckMetricTestCase(unittest.TestCase):
             SM.step(pred=pred, gt=mask)
             EM.step(pred=pred, gt=mask)
             MAE.step(pred=pred, gt=mask)
+            HCE.step(pred=pred, gt=mask)
             MSIOU.step(pred=pred, gt=mask)
             FMv2.step(pred=pred, gt=mask)
             SI_MAE.step(pred=pred, gt=mask)
@@ -179,6 +181,7 @@ class CheckMetricTestCase(unittest.TestCase):
         sm = SM.get_results()["sm"]
         em = EM.get_results()["em"]
         mae = MAE.get_results()["mae"]
+        hce = HCE.get_results()["hce"]
         msiou = MSIOU.get_results()
         fmv2 = FMv2.get_results()
         si_mae = SI_MAE.get_results()["si_mae"]
@@ -186,6 +189,7 @@ class CheckMetricTestCase(unittest.TestCase):
 
         cls.curr_results = {
             "MAE": mae,
+            "HCE": hce,
             "Smeasure": sm,
             "wFmeasure": wfm,
             # "MSIOU": msiou,
@@ -258,17 +262,22 @@ class CheckMetricTestCase(unittest.TestCase):
         print("Current results:")
         pprint(cls.curr_results)
         cls.default_results = default_results["v1_4_3"]  # 68
-        si_variant_results = default_results["v1_5_0"]  # 78+6
-        for res in [si_variant_results]:
-            if any([k in cls.default_results for k in res.keys()]):
+        for append_version in [
+            "v1_5_0",  # 78+6 Size-Invariant Variants
+            "v1_5_1",  # 1 HCE
+        ]:
+            if any([k in cls.default_results for k in default_results[append_version].keys()]):
                 raise ValueError("Some keys will be overwritten by the SI variant results.")
-            cls.default_results.update(res)
+            cls.default_results.update(default_results[append_version])
 
     def test_sm(self):
         self.assertEqual(self.curr_results["Smeasure"], self.default_results["Smeasure"])
 
     def test_wfm(self):
         self.assertEqual(self.curr_results["wFmeasure"], self.default_results["wFmeasure"])
+
+    def test_hce(self):
+        self.assertEqual(self.curr_results["HCE"], self.default_results["HCE"])
 
     def test_mae(self):
         self.assertEqual(self.curr_results["MAE"], self.default_results["MAE"])

@@ -7,8 +7,13 @@ packages = ["py_sod_metrics"] # 直接指定包名
 
 [project]
 name = "pysodmetrics"
-version = "1.5.0"
-dependencies = ["numpy>=1.18,<2.0", "scipy>=1.5,<2.0", "scikit-image>=0.19,<0.25"]
+version = "1.5.1"
+dependencies = [
+  "numpy>=1.18,<2.0",
+  "scipy>=1.5,<2.0",
+  "scikit-image>=0.19,<0.25",
+  "opencv-python-headless>=4.7.0,<5.0.0",
+]
 requires-python = ">=3.6"
 authors = [{ name = "lartpang", email = "lartpang@gmail.com" }]
 maintainers = [{ name = "lartpang", email = "lartpang@gmail.com" }]
@@ -19,6 +24,7 @@ keywords = [
   "salient object detection",
   "camouflaged object detection",
   "medical image segmentation",
+  "dichotomous image segmentation",
   "saliency detection",
   "metric",
   "deep learning",
