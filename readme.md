@@ -8,8 +8,13 @@
   <img src="https://img.shields.io/github/last-commit/lartpang/PySODMetrics">
   <img src="https://img.shields.io/github/last-commit/lartpang/PySODMetrics">
   <img src="https://img.shields.io/github/release-date/lartpang/PySODMetrics">
-  <img src="https://api.star-history.com/svg?repos=lartpang/PySODMetrics&type=Date" alt="Star History Chart" width="600" height="auto">
 </div>
+
+> [!important]
+>
+> Our exploration in this field continues with [PyIRSTDMetrics](https://github.com/lartpang/PyIRSTDMetrics), a project born from the same core motivation.
+> ​​Think of them as twin initiatives: this project maps the landscape of current evaluation, while its sibling takes the next step to expand upon and rethink it.
+> We'd love your star! 🌟
 
 ## Introduction
 

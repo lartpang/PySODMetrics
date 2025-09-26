@@ -15,7 +15,7 @@ keywords:
   - saliency-methods
 license: MIT License
 title: "PySODMetrics"
-abstract: "A simple and efficient implementation of SOD metrics"
+abstract: "A Simple and Efficient Implementation of Grayscale/Binary Segmentation Metrics"
 url: "https://github.com/lartpang/PySODMetrics"
 repository-code: "https://github.com/lartpang/PySODMetrics"
 version: v1.4.3

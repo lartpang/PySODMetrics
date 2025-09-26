@@ -10,6 +10,13 @@
   <img src="https://img.shields.io/github/release-date/lartpang/PySODMetrics">
 </div>
 
+> [!important]
+>
+> 我们在这一领域的探索仍在继续，这一次是通过 [PyIRSTDMetrics](https://github.com/lartpang/PyIRSTDMetrics) —— 一个源于同样核心动机的项目。
+> 你可以把它们看作是一对“孪生”计划：这个项目旨在描绘当前评估的全景，而它的“兄弟”项目则更进一步，在此基础上加以拓展，并重新思考这一体系。
+> 我们很希望得到你的 Star！ 🌟
+
+
 ## 介绍
 
 一份简单有效的 SOD 指标实现。
