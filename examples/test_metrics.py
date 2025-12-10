@@ -6,6 +6,7 @@ from pprint import pprint
 
 import cv2
 import numpy as np
+from skimage import data
 
 sys.path.append("..")
 import py_sod_metrics
@@ -51,6 +52,8 @@ class CheckMetricTestCase(unittest.TestCase):
         EM = py_sod_metrics.Emeasure()
         MAE = py_sod_metrics.MAE()
         HCE = py_sod_metrics.HumanCorrectionEffortMeasure()
+        CM = py_sod_metrics.ContextMeasure()
+        CCM = py_sod_metrics.CamouflageContextMeasure()
         MSIOU = py_sod_metrics.MSIoU(with_dynamic=True, with_adaptive=True, with_binary=True)
 
         # fmt: off
@@ -165,6 +168,11 @@ class CheckMetricTestCase(unittest.TestCase):
             pred_path = os.path.join(pred_root, mask_name)
             mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
             pred = cv2.imread(pred_path, cv2.IMREAD_GRAYSCALE)
+
+            # random select an image from skimage.data
+            img = data.astronaut()
+            img = cv2.resize(img, dsize=(mask.shape[1], mask.shape[0]), interpolation=cv2.INTER_LINEAR)
+
             FM.step(pred=pred, gt=mask)
             WFM.step(pred=pred, gt=mask)
             SM.step(pred=pred, gt=mask)
@@ -175,6 +183,8 @@ class CheckMetricTestCase(unittest.TestCase):
             FMv2.step(pred=pred, gt=mask)
             SI_MAE.step(pred=pred, gt=mask)
             SI_FMv2.step(pred=pred, gt=mask)
+            CM.step(pred=pred, gt=mask)
+            CCM.step(pred=pred, gt=mask, img=img)
 
         fm = FM.get_results()["fm"]
         wfm = WFM.get_results()["wfm"]
@@ -186,6 +196,8 @@ class CheckMetricTestCase(unittest.TestCase):
         fmv2 = FMv2.get_results()
         si_mae = SI_MAE.get_results()["si_mae"]
         si_fmv2 = SI_FMv2.get_results()
+        cm = CM.get_results()["cm"]
+        ccm = CCM.get_results()["ccm"]
 
         cls.curr_results = {
             "MAE": mae,
@@ -207,6 +219,9 @@ class CheckMetricTestCase(unittest.TestCase):
             "maxFm": fm["curve"].max(),
             # size-invariant
             "si_mae": si_mae,
+            # context-measure
+            "cm": cm,
+            "ccm": ccm,
         }
         # fmt: off
         base_metrics = ["fm", "f1", "pre", "rec", "fpr", "iou", "dice", "spec", "ber", "oa", "kappa"]
@@ -265,6 +280,7 @@ class CheckMetricTestCase(unittest.TestCase):
         for append_version in [
             "v1_5_0",  # 78+6 Size-Invariant Variants
             "v1_5_1",  # 1 HCE
+            "v1_6_0",  # Context-Measure Series
         ]:
             if any([k in cls.default_results for k in default_results[append_version].keys()]):
                 raise ValueError("Some keys will be overwritten by the SI variant results.")
@@ -470,6 +486,12 @@ class CheckMetricTestCase(unittest.TestCase):
         self.assertEqual(self.curr_results["si_overall_meankappa"], self.default_results["si_overall_meankappa"])
         self.assertEqual(self.curr_results["si_overall_maxkappa"], self.default_results["si_overall_maxkappa"])
         self.assertEqual(self.curr_results["si_overall_bikappa"], self.default_results["si_overall_bikappa"])
+
+    def test_cm_series(self):
+        # Context-measure tests - only validate they run without errors
+        # since we don't have baseline values yet
+        self.assertEqual(self.curr_results["cm"], self.default_results["cm"])
+        self.assertEqual(self.curr_results["ccm"], self.default_results["ccm"])
 
 
 if __name__ == "__main__":
