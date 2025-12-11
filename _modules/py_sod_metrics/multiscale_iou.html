@@ -1,0 +1,304 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>py_sod_metrics.multiscale_iou &mdash; PySODMetrics 1.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=72d88caf"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            PySODMetrics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metrics.html">Supported Metrics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PySODMetrics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">py_sod_metrics.multiscale_iou</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for py_sod_metrics.multiscale_iou</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE</span><span class="p">,</span> <span class="n">get_adaptive_threshold</span><span class="p">,</span> <span class="n">validate_and_normalize_input</span>
+
+
+<div class="viewcode-block" id="MSIoU">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.multiscale_iou.MSIoU">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MSIoU</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Multi-Scale Intersection over Union (MSIoU) metric.</span>
+
+<span class="sd">    This implements the MSIoU metric which evaluates segmentation quality at multiple scales by comparing edge maps. It addresses the limitation of traditional IoU which struggles with fine structures in segmentation results.</span>
+
+
+<span class="sd">    ```</span>
+<span class="sd">    @inproceedings{MSIoU,</span>
+<span class="sd">        title = {Multiscale IOU: A Metric for Evaluation of Salient Object Detection with Fine Structures},</span>
+<span class="sd">        author = {Ahmadzadeh, Azim and Kempton, Dustin J. and Chen, Yang and Angryk, Rafal A.},</span>
+<span class="sd">        booktitle = ICIP,</span>
+<span class="sd">        year = {2021},</span>
+<span class="sd">    }</span>
+<span class="sd">    ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MSIoU.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.multiscale_iou.MSIoU.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_dynamic</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">with_adaptive</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">with_binary</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">num_levels</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the MSIoU evaluator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.</span>
+<span class="sd">            with_adaptive (bool, optional): Record adaptive results for adp version.</span>
+<span class="sd">            with_binary (bool, optional): Record binary results for binary version.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">with_dynamic</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">with_adaptive</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">binary_results</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">with_binary</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="c1"># The values of this collection determines the resolutions based on which MIoU is computed.</span>
+        <span class="c1"># It is set as the original implementation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cell_sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">num_levels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="MSIoU.get_edge">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.multiscale_iou.MSIoU.get_edge">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Edge detection based on the `scipy.ndimage.sobel` function.</span>
+
+<span class="sd">        :param mask: a binary mask of an object whose edges are of interest.</span>
+<span class="sd">        :return: a binary mask of 1&#39;s as edges and 0&#39;s as background.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sx</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">sobel</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="p">)</span>
+        <span class="n">sy</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">sobel</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="p">)</span>
+        <span class="n">sob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">)</span>
+        <span class="c1"># sob[sob &gt; 0] = 1</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">sob</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">sob</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MSIoU.shrink_by_grid">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.multiscale_iou.MSIoU.shrink_by_grid">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">shrink_by_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">cell_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Shrink the image by summing values within grid cells.</span>
+
+<span class="sd">        Performs box-counting after applying zero padding if the image dimensions</span>
+<span class="sd">        are not perfectly divisible by the cell size.</span>
+
+<span class="sd">        :param image: The input binary image (edges).</span>
+<span class="sd">        :param cell_size: The size of the grid cells.</span>
+<span class="sd">        :return: A shrunk binary image where each pixel represents a grid cell.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">cell_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cell size must be a positive integer&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cell_size</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Calculate padding sizes to make dimensions divisible by cell_size</span>
+            <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">pad_h</span> <span class="o">=</span> <span class="p">(</span><span class="n">cell_size</span> <span class="o">-</span> <span class="n">h</span> <span class="o">%</span> <span class="n">cell_size</span><span class="p">)</span> <span class="o">%</span> <span class="n">cell_size</span>
+            <span class="n">pad_w</span> <span class="o">=</span> <span class="p">(</span><span class="n">cell_size</span> <span class="o">-</span> <span class="n">w</span> <span class="o">%</span> <span class="n">cell_size</span><span class="p">)</span> <span class="o">%</span> <span class="n">cell_size</span>
+
+            <span class="c1"># Apply padding if necessary</span>
+            <span class="k">if</span> <span class="n">pad_h</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">pad_w</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># Padding is added to the top and left edges.</span>
+                <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="p">((</span><span class="n">pad_h</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">pad_w</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span> <span class="n">constant_values</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># Reshape and sum within each cell</span>
+            <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">h</span> <span class="o">//</span> <span class="n">cell_size</span><span class="p">,</span> <span class="n">cell_size</span><span class="p">,</span> <span class="n">w</span> <span class="o">//</span> <span class="n">cell_size</span><span class="p">,</span> <span class="n">cell_size</span><span class="p">)</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="c1"># image[image &gt; 0] = 1</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">image</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MSIoU.multi_scale_iou">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.multiscale_iou.MSIoU.multi_scale_iou">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">multi_scale_iou</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred_edge</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt_edge</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate Multi-Scale IoU.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred_edge (np.ndarray): edge map of pred</span>
+<span class="sd">            gt_edge (np.ndarray): edge map of gt</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: ratios</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Calculate IoU ratios at different scales</span>
+        <span class="n">ratios</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">cell_size</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell_sizes</span><span class="p">:</span>
+            <span class="c1"># Shrink both prediction and ground truth edges</span>
+            <span class="n">shrunk_pred_edge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrink_by_grid</span><span class="p">(</span><span class="n">pred_edge</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="n">cell_size</span><span class="p">)</span>
+            <span class="n">shrunk_gt_edge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrink_by_grid</span><span class="p">(</span><span class="n">gt_edge</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="n">cell_size</span><span class="p">)</span>
+
+            <span class="c1"># Calculate IoU with smoothing to prevent division by zero</span>
+            <span class="n">numerator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">shrunk_pred_edge</span><span class="p">,</span> <span class="n">shrunk_gt_edge</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="c1"># Only consider ground truth for denominator</span>
+            <span class="n">denominator</span> <span class="o">=</span> <span class="n">shrunk_gt_edge</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">ratios</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ratios</span></div>
+
+
+<div class="viewcode-block" id="MSIoU.binarizing">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.multiscale_iou.MSIoU.binarizing">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">binarizing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred_bin</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt_edge</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate Multi-Scale IoU based on dynamically thresholding.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred_bin (np.ndarray): binarized pred</span>
+<span class="sd">            gt_edge (np.ndarray): gt binarized by 128</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: areas under the curve</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred_edge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">pred_bin</span><span class="p">)</span>
+        <span class="n">ratios</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">multi_scale_iou</span><span class="p">(</span><span class="n">pred_edge</span><span class="p">,</span> <span class="n">gt_edge</span><span class="p">)</span>  <span class="c1"># 10</span>
+
+        <span class="c1"># Calculate area under the curve using trapezoidal rule</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">ratios</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell_sizes</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="MSIoU.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.multiscale_iou.MSIoU.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the Multi-Scale IoU for a single prediction-ground truth pair.</span>
+
+<span class="sd">        This method first extracts edges from both prediction and ground truth,</span>
+<span class="sd">        then computes IoU ratios at multiple scales defined by self.cell_sizes.</span>
+<span class="sd">        Finally, it calculates the area under the curve of these ratios.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The MSIoU score for the given pair (float between 0 and 1).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="p">)</span>
+
+        <span class="c1"># Calculate MSIoU for this pair and store the result</span>
+        <span class="n">gt_edge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">_pred</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">threshold</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">257</span><span class="p">):</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">binarizing</span><span class="p">(</span><span class="n">_pred</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">gt_edge</span><span class="p">))</span>
+            <span class="c1"># threshold_masks = pred[..., None] &gt;= np.arange(0, 257)[None, None, :]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dynamic_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">adaptive_threshold</span> <span class="o">=</span> <span class="n">get_adaptive_threshold</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">binarizing</span><span class="p">(</span><span class="n">pred</span> <span class="o">&gt;=</span> <span class="n">adaptive_threshold</span><span class="p">,</span> <span class="n">gt_edge</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">binary_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">binary_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">binarizing</span><span class="p">(</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">gt_edge</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="MSIoU.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.multiscale_iou.MSIoU.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results about MSIoU.</span>
+
+<span class="sd">        Calculates the mean of all stored MSIoU values from previous calls to step().</span>
+
+<span class="sd">        :return: Dictionary with key &#39;msiou&#39; and the mean MSIoU value.</span>
+<span class="sd">        :raises: ValueError if no samples have been processed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;dynamic&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dynamic_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;adaptive&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adaptive_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">binary_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;binary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">binary_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, lartpang.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
