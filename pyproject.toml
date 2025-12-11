@@ -46,6 +46,12 @@ Repository = "https://github.com/lartpang/PySODMetrics.git"
 "Bug Tracker" = "https://github.com/lartpang/PySODMetrics/issues"
 Changelog = "https://github.com/lartpang/PySODMetrics/blob/master/CHANGELOG.md"
 
+[project.optional-dependencies]
+docs = [
+  "sphinx>=7.0.0",
+  "sphinx-rtd-theme>=2.0.0",
+]
+
 [tool.isort]
 # https://pycqa.github.io/isort/docs/configuration/options/
 profile = "black"
