@@ -5,28 +5,24 @@ from .utils import TYPE, get_adaptive_threshold, validate_and_normalize_input
 
 
 class MSIoU:
+    """Multi-Scale Intersection over Union (MSIoU) metric.
+
+    This implements the MSIoU metric which evaluates segmentation quality at multiple scales by comparing edge maps. It addresses the limitation of traditional IoU which struggles with fine structures in segmentation results.
+
+
+    ```
+    @inproceedings{MSIoU,
+        title = {Multiscale IOU: A Metric for Evaluation of Salient Object Detection with Fine Structures},
+        author = {Ahmadzadeh, Azim and Kempton, Dustin J. and Chen, Yang and Angryk, Rafal A.},
+        booktitle = ICIP,
+        year = {2021},
+    }
+    ```
     """
-    Multi-Scale Intersection over Union (MSIoU) metric.
 
-    ::
+    def __init__(self, with_dynamic: bool, with_adaptive: bool, *, with_binary: bool = False, num_levels=10):
+        """Initialize the MSIoU evaluator.
 
-        @inproceedings{MSIoU,
-            title = {Multiscale IOU: A Metric for Evaluation of Salient Object Detection with Fine Structures},
-            author = {Ahmadzadeh, Azim and Kempton, Dustin J. and Chen, Yang and Angryk, Rafal A.},
-            booktitle = ICIP,
-            year = {2021},
-        }
-    """
-
-    def __init__(
-        self,
-        with_dynamic: bool,
-        with_adaptive: bool,
-        *,
-        with_binary: bool = False,
-        num_levels=10,
-    ):
-        """
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.
             with_adaptive (bool, optional): Record adaptive results for adp version.
@@ -93,7 +89,6 @@ class MSIoU:
         Returns:
             list: ratios
         """
-
         # Calculate IoU ratios at different scales
         ratios = []
         for cell_size in self.cell_sizes:

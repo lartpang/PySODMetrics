@@ -12,9 +12,7 @@ from .utils import EPS, TYPE, validate_and_normalize_input
 class ContextMeasure:
     """Context-measure for evaluating foreground segmentation quality.
 
-    This metric evaluates predictions by considering both forward inference (how well
-    predictions align with ground truth) and reverse deduction (how completely ground
-    truth is covered by predictions), using context-aware Gaussian kernels.
+    This metric evaluates predictions by considering both forward inference (how well predictions align with ground truth) and reverse deduction (how completely ground truth is covered by predictions), using context-aware Gaussian kernels.
 
     ```
     @article{ContextMeasure,
@@ -27,12 +25,11 @@ class ContextMeasure:
     """
 
     def __init__(self, beta2: float = 1.0, alpha: float = 6.0):
-        """
+        """Initialize the Context Measure evaluator.
+
         Args:
-            beta2 (float): Balancing factor between forward inference and reverse deduction.
-                          Higher values give more weight to forward inference. Defaults to 1.0.
-            alpha (float): Scaling factor for Gaussian kernel covariance, controls the
-                          spatial context range. Defaults to 6.0.
+            beta2 (float): Balancing factor between forward inference and reverse deduction. Higher values give more weight to forward inference. Defaults to 1.0.
+            alpha (float): Scaling factor for Gaussian kernel covariance, controls the spatial context range. Defaults to 6.0.
         """
         self.beta2 = beta2
         self.alpha = alpha
@@ -57,7 +54,7 @@ class ContextMeasure:
         self.scores.append(score)
 
     def compute(self, pred: np.ndarray, gt: np.ndarray, cd: np.ndarray) -> float:
-        """Computes the context measure between prediction and ground truth.
+        """Compute the context measure between prediction and ground truth.
 
         Args:
             pred (np.ndarray): Prediction map (values between 0 and 1).
@@ -143,10 +140,7 @@ class ContextMeasure:
 class CamouflageContextMeasure(ContextMeasure):
     """Camouflage Context-measure for evaluating camouflaged object detection quality.
 
-    This metric extends the base ContextMeasure by incorporating camouflage degree,
-    which measures how well the foreground blends with its surrounding background.
-    It uses patch-based nearest neighbor matching in Lab color space with spatial
-    constraints to estimate camouflage difficulty.
+    This metric extends the base ContextMeasure by incorporating camouflage degree, which measures how well the foreground blends with its surrounding background. It uses patch-based nearest neighbor matching in Lab color space with spatial constraints to estimate camouflage difficulty.
 
     ```
     @article{ContextMeasure,
@@ -159,7 +153,8 @@ class CamouflageContextMeasure(ContextMeasure):
     """
 
     def __init__(self, beta2: float = 1.2, alpha: float = 6.0, gamma: int = 8, lambda_spatial: float = 20):
-        """
+        """Initialize the Camouflage Context Measure evaluator.
+
         Args:
             beta2 (float): Balancing factor for forward and reverse. Defaults to 1.2 for camouflage.
             alpha (float): Gaussian kernel scaling factor. Defaults to 6.0.
@@ -189,7 +184,7 @@ class CamouflageContextMeasure(ContextMeasure):
         self.scores.append(score)
 
     def _calculate_camouflage_degree(self, img: np.ndarray, mask: np.ndarray, w: int = 7) -> tuple:
-        """Computes the camouflage degree matrix using Lab+spatial ANN and RGB reconstruction.
+        """Compute the camouflage degree matrix using Lab+spatial ANN and RGB reconstruction.
 
         Args:
             img (np.ndarray): RGB image (H x W x 3).
@@ -237,8 +232,7 @@ class CamouflageContextMeasure(ContextMeasure):
     def _ann_with_spatial_faiss(self, x, q, x_coords, q_coords, m=16):
         """Approximate Nearest Neighbor search with spatial constraints using sklearn.
 
-        Note: Method name retained for compatibility, but now uses sklearn.neighbors.NearestNeighbors
-        instead of FAISS for a more lightweight dependency.
+        Note: Method name retained for compatibility, but now uses sklearn.neighbors.NearestNeighbors instead of FAISS for a more lightweight dependency.
         """
         all_coords = np.vstack([x_coords, q_coords])
         scaled_coords = StandardScaler().fit_transform(all_coords)
@@ -320,7 +314,7 @@ class CamouflageContextMeasure(ContextMeasure):
         return img_recon
 
     def _compute_delta_e2000_matrix(self, img1_rgb: np.ndarray, img2_rgb: np.ndarray) -> np.ndarray:
-        """Computes the perceptual color difference (ΔE 2000) between two images.
+        """Compute the perceptual color difference (ΔE 2000) between two images.
 
         Args:
             img1_rgb (np.ndarray): First input image (H x W x 3) in RGB format.

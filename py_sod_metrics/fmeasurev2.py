@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import abc
 
 import numpy as np
@@ -20,7 +19,8 @@ class _BaseHandler:
         with_binary: bool = False,
         sample_based: bool = True,
     ):
-        """
+        """Initialize the base handler.
+
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.
             with_adaptive (bool, optional): Record adaptive results for adp version.
@@ -71,18 +71,19 @@ class _BaseHandler:
 
 
 class IOUHandler(_BaseHandler):
-    """Intersection over Union
+    """Intersection over Union.
 
     iou = tp / (tp + fp + fn)
     """
 
     def __call__(self, tp, fp, tn, fn):
+        """Calculate IoU from confusion matrix components."""
         # ious = np.where(Ps + FNs == 0, 0, TPs / (Ps + FNs))
         return self.divide(tp, tp + fp + fn)
 
 
 class SpecificityHandler(_BaseHandler):
-    """Specificity
+    """Specificity.
 
     True negative rate (TNR)/specificity (SPC)/selectivity
 
@@ -90,6 +91,7 @@ class SpecificityHandler(_BaseHandler):
     """
 
     def __call__(self, tp, fp, tn, fn):
+        """Calculate specificity from confusion matrix components."""
         # specificities = np.where(TNs + FPs == 0, 0, TNs / (TNs + FPs))
         return self.divide(tn, tn + fp)
 
@@ -98,29 +100,31 @@ TNRHandler = SpecificityHandler
 
 
 class DICEHandler(_BaseHandler):
-    """DICE
+    """DICE.
 
     dice = 2 * tp / (tp + fn + tp + fp)
     """
 
     def __call__(self, tp, fp, tn, fn):
+        """Calculate DICE coefficient from confusion matrix components."""
         # dices = np.where(TPs + FPs == 0, 0, 2 * TPs / (T + Ps))
         return self.divide(2 * tp, tp + fn + tp + fp)
 
 
 class OverallAccuracyHandler(_BaseHandler):
-    """OverallAccuracy
+    """Overall Accuracy.
 
     oa = overall_accuracy = (tp + tn) / (tp + fp + tn + fn)
     """
 
     def __call__(self, tp, fp, tn, fn):
+        """Calculate overall accuracy from confusion matrix components."""
         # dices = np.where(TPs + FPs == 0, 0, 2 * TPs / (T + Ps))
         return self.divide(tp + tn, tp + fp + tn + fn)
 
 
 class KappaHandler(_BaseHandler):
-    """KappaAccuracy
+    """Kappa Accuracy.
 
     kappa = kappa = (oa - p_) / (1 - p_)
     p_ = [(tp + fp)(tp + fn) + (tn + fn)(tn + tp)] / (tp + fp + tn + fn)^2
@@ -134,7 +138,8 @@ class KappaHandler(_BaseHandler):
         with_binary: bool = False,
         sample_based: bool = True,
     ):
-        """
+        """Initialize the Kappa handler.
+
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.
             with_adaptive (bool, optional): Record adaptive results for adp version.
@@ -152,6 +157,7 @@ class KappaHandler(_BaseHandler):
         self.oa = OverallAccuracyHandler(False, False)
 
     def __call__(self, tp, fp, tn, fn):
+        """Calculate Kappa coefficient from confusion matrix components."""
         oa = self.oa(tp, fp, tn, fn)
         hpy_p = self.divide(
             (tp + fp) * (tp + fn) + (tn + fn) * (tn + tp),
@@ -161,18 +167,19 @@ class KappaHandler(_BaseHandler):
 
 
 class PrecisionHandler(_BaseHandler):
-    """Precision
+    """Precision.
 
     precision = tp / (tp + fp)
     """
 
     def __call__(self, tp, fp, tn, fn):
+        """Calculate precision from confusion matrix components."""
         # precisions = np.where(Ps == 0, 0, TPs / Ps)
         return self.divide(tp, tp + fp)
 
 
 class RecallHandler(_BaseHandler):
-    """Recall
+    """Recall.
 
     True positive rate (TPR)/recall/sensitivity (SEN)/probability of detection/hit rate/power
 
@@ -180,6 +187,7 @@ class RecallHandler(_BaseHandler):
     """
 
     def __call__(self, tp, fp, tn, fn):
+        """Calculate recall from confusion matrix components."""
         # recalls = np.where(TPs == 0, 0, TPs / T)
         return self.divide(tp, tp + fn)
 
@@ -189,7 +197,7 @@ SensitivityHandler = RecallHandler
 
 
 class FPRHandler(_BaseHandler):
-    """False Positive Rate
+    """False Positive Rate.
 
     False positive rate (FPR)/probability of false alarm/fall-out
 
@@ -197,16 +205,18 @@ class FPRHandler(_BaseHandler):
     """
 
     def __call__(self, tp, fp, tn, fn):
+        """Calculate false positive rate from confusion matrix components."""
         return self.divide(fp, tn + fp)
 
 
 class BERHandler(_BaseHandler):
-    """Balance Error Rate
+    """Balance Error Rate.
 
     ber = 1 - 0.5 * (tp / (tp + fn) + tn / (tn + fp))
     """
 
     def __call__(self, tp, fp, tn, fn):
+        """Calculate balanced error rate from confusion matrix components."""
         fg = np.asarray(tp + fn, dtype=TYPE)
         bg = np.asarray(tn + fp, dtype=TYPE)
         np.divide(tp, fg, out=fg, where=fg != 0)
@@ -215,7 +225,7 @@ class BERHandler(_BaseHandler):
 
 
 class FmeasureHandler(_BaseHandler):
-    """F-measure
+    """F-measure.
 
     fmeasure = (beta + 1) * precision * recall / (beta * precision + recall)
     """
@@ -229,7 +239,8 @@ class FmeasureHandler(_BaseHandler):
         sample_based: bool = True,
         beta: float = 0.3,
     ):
-        """
+        """Initialize the F-measure handler.
+
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.
             with_adaptive (bool, optional): Record adaptive results for adp version.
@@ -250,7 +261,8 @@ class FmeasureHandler(_BaseHandler):
         self.recall = RecallHandler(False, False)
 
     def __call__(self, tp, fp, tn, fn):
-        """
+        """Calculate F-measure from confusion matrix components.
+
         Note:
             Uses separate precision and recall calculations to maintain consistency with original implementation rather than combined formula.
         """
@@ -260,6 +272,11 @@ class FmeasureHandler(_BaseHandler):
 
 
 class FmeasureV2:
+    """Enhanced F-measure evaluator with support for multiple evaluation metrics.
+
+    This class provides a flexible framework for computing various binary classification metrics including precision, recall, specificity, dice, IoU, and F-measure. It supports dynamic thresholding, adaptive thresholding, and binary evaluation modes.
+    """
+
     def __init__(self, metric_handlers: dict = None):
         """Enhanced Fmeasure class with more relevant metrics, e.g. precision, recall, specificity, dice, iou, fmeasure and so on.
 
@@ -269,6 +286,12 @@ class FmeasureV2:
         self._metric_handlers = metric_handlers if metric_handlers else {}
 
     def add_handler(self, handler_name, metric_handler):
+        """Add a metric handler to the evaluator.
+
+        Args:
+            handler_name (str): Name identifier for the metric handler.
+            metric_handler: Handler instance that computes the specific metric.
+        """
         self._metric_handlers[handler_name] = metric_handler
 
     @staticmethod
@@ -358,9 +381,7 @@ class FmeasureV2:
         for handler_name, handler in self._metric_handlers.items():
             if handler.dynamic_results is not None:
                 if dynamical_tpfptnfn is None:
-                    dynamical_tpfptnfn = self.dynamically_binarizing(
-                        pred=pred, gt=gt, FG=FG, BG=BG
-                    )
+                    dynamical_tpfptnfn = self.dynamically_binarizing(pred=pred, gt=gt, FG=FG, BG=BG)
                 handler.dynamic_results.append(handler(**dynamical_tpfptnfn))
 
             if handler.adaptive_results is not None:

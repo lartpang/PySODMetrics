@@ -8,8 +8,9 @@ from .utils import TYPE, validate_and_normalize_input
 
 def parse_connected_components(mask: np.ndarray, area_threshold: float = 50) -> tuple:
     """Find the connected components in a binary mask.
-    If there are no connected components, return an empty list.
-    If all the connected components are smaller than the area_threshold, we will return the largest one.
+
+    1. If there are no connected components, return an empty list.
+    2. If all the connected components are smaller than the area_threshold, we will return the largest one.
 
     Args:
         mask (np.ndarray): binary mask
@@ -87,6 +88,8 @@ def get_kth_bit(n: np.ndarray, k: int) -> np.ndarray:
 
 class SizeInvarianceFmeasureV2(FmeasureV2):
     """Size invariance version of FmeasureV2.
+
+    This provides size-invariant versions of standard SOD metrics that address the imbalance problem in multi-object salient object detection. Traditional metrics can be biased toward larger objects, while size-invariant metrics ensure fair evaluation across objects of different sizes.
 
     ```
     @inproceedings{SizeInvarianceVariants,

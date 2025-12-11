@@ -6,12 +6,27 @@ TYPE = np.float64
 
 
 def validate_and_normalize_input(pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
-    """Performs input validation and normalization."""
+    """Validate and optionally normalize prediction and ground truth inputs.
+
+    This function ensures that prediction and ground truth arrays have compatible shapes and appropriate data types. When normalization is enabled, it converts inputs to the standard format required by the predefined metrics (pred in [0, 1] as float, gt as boolean).
+
+    Args:
+        pred (np.ndarray): Prediction array. If `normalize=True`, should be uint8 grayscale image (0-255). If `normalize=False`, should be float32/float64 in range [0, 1].
+        gt (np.ndarray): Ground truth array. If `normalize=True`, should be uint8 grayscale image (0-255). If `normalize=False`, should be boolean array.
+        normalize (bool, optional): Whether to normalize the input data using prepare_data(). Defaults to True.
+
+    Returns:
+        tuple: A tuple containing:
+            - pred (np.ndarray): Normalized prediction as float64 in range [0, 1].
+            - gt (np.ndarray): Normalized ground truth as boolean array.
+
+    Raises:
+        ValueError: If prediction and ground truth shapes don't match, or if prediction values are outside [0, 1] range when normalize=False.
+        TypeError: If data types are invalid when normalize=False (pred must be float32/float64, gt must be boolean).
+    """
     # Validate input shapes
     if pred.shape != gt.shape:
-        raise ValueError(
-            f"Shape mismatch between prediction ({pred.shape}) and ground truth ({gt.shape})"
-        )
+        raise ValueError(f"Shape mismatch between prediction ({pred.shape}) and ground truth ({gt.shape})")
 
     # Handle normalization
     if normalize:
@@ -30,17 +45,19 @@ def validate_and_normalize_input(pred: np.ndarray, gt: np.ndarray, normalize: bo
 
 
 def prepare_data(pred: np.ndarray, gt: np.ndarray) -> tuple:
-    """A numpy-based function for preparing `pred` and `gt`.
+    """Convert and normalize prediction and ground truth data.
 
-    - for `pred`, it looks like `mapminmax(im2double(...))` of matlab;
-    - `gt` will be binarized by 128.
+    - For predictions, mimics MATLAB's `mapminmax(im2double(...))`.
+    - For ground truth, applies binary thresholding at 128.
 
     Args:
-        pred (np.uint8): Prediction, gray scale image.
-        gt (np.uint8): Ground truth, gray scale image.
+        pred (np.ndarray): Prediction grayscale image, uint8 type with values in [0, 255].
+        gt (np.ndarray): Ground truth grayscale image, uint8 type with values in [0, 255].
 
     Returns:
-        tuple: pred (np.float64), gt (bool)
+        tuple: A tuple containing:
+            - pred (np.ndarray): Normalized prediction as float64 in range [0, 1].
+            - gt (np.ndarray): Binary ground truth as boolean array.
     """
     gt = gt > 128
     # im2double, mapminmax

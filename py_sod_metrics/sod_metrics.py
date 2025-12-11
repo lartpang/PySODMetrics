@@ -9,20 +9,25 @@ from skimage import measure, morphology
 from .utils import EPS, TYPE, get_adaptive_threshold, validate_and_normalize_input
 
 
-class Fmeasure(object):
-    def __init__(self, beta: float = 0.3):
-        """F-measure for SOD.
+class Fmeasure:
+    r"""F-measure evaluator for salient object detection.
 
-        ```
-        @inproceedings{Fmeasure,
-            title={Frequency-tuned salient region detection},
-            author={Achanta, Radhakrishna and Hemami, Sheila and Estrada, Francisco and S{\"u}sstrunk, Sabine},
-            booktitle=CVPR,
-            number={CONF},
-            pages={1597--1604},
-            year={2009}
-        }
-        ```
+    Computes precision, recall, and F-measure at multiple thresholds, supporting both adaptive and dynamic evaluation modes.
+
+    ```
+    @inproceedings{Fmeasure,
+        title={Frequency-tuned salient region detection},
+        author={Achanta, Radhakrishna and Hemami, Sheila and Estrada, Francisco and S{\"u}sstrunk, Sabine},
+        booktitle=CVPR,
+        number={CONF},
+        pages={1597--1604},
+        year={2009}
+    }
+    ```
+    """
+
+    def __init__(self, beta: float = 0.3):
+        """Initialize the F-measure evaluator.
 
         Args:
             beta (float): the weight of the precision
@@ -123,20 +128,24 @@ class Fmeasure(object):
         return dict(fm=dict(adp=adaptive_fm, curve=changeable_fm), pr=dict(p=precision, r=recall))
 
 
-class MAE(object):
-    def __init__(self):
-        """MAE(mean absolute error) for SOD.
+class MAE:
+    r"""Mean Absolute Error.
 
-        ```
-        @inproceedings{MAE,
-            title={Saliency filters: Contrast based filtering for salient region detection},
-            author={Perazzi, Federico and Kr{\"a}henb{\"u}hl, Philipp and Pritch, Yael and Hornung, Alexander},
-            booktitle=CVPR,
-            pages={733--740},
-            year={2012}
-        }
-        ```
-        """
+    Computes the MAE between predicted saliency maps and ground truth masks.
+
+    ```
+    @inproceedings{MAE,
+        title={Saliency filters: Contrast based filtering for salient region detection},
+        author={Perazzi, Federico and Kr{\"a}henb{\"u}hl, Philipp and Pritch, Yael and Hornung, Alexander},
+        booktitle=CVPR,
+        pages={733--740},
+        year={2012}
+    }
+    ```
+    """
+
+    def __init__(self):
+        """Initialize the MAE evaluator."""
         self.maes = []
 
     def step(self, pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
@@ -171,22 +180,25 @@ class MAE(object):
         return dict(mae=mae)
 
 
-class Smeasure(object):
-    def __init__(self, alpha: float = 0.5):
-        """S-measure(Structure-measure) of SOD.
+class Smeasure:
+    """S-measure evaluates foreground maps by considering both object-aware and region-aware structural similarity between prediction and ground truth. It combines object-level and region-level scores to provide a comprehensive assessment of structural quality.
 
-        ```
-        @inproceedings{Smeasure,
-            title={Structure-measure: A new way to eval foreground maps},
-            author={Fan, Deng-Ping and Cheng, Ming-Ming and Liu, Yun and Li, Tao and Borji, Ali},
-            booktitle=ICCV,
-            pages={4548--4557},
-            year={2017}
-        }
-        ```
+    ```
+    @inproceedings{Smeasure,
+        title={Structure-measure: A new way to eval foreground maps},
+        author={Fan, Deng-Ping and Cheng, Ming-Ming and Liu, Yun and Li, Tao and Borji, Ali},
+        booktitle=ICCV,
+        pages={4548--4557},
+        year={2017}
+    }
+    ```
+    """
+
+    def __init__(self, alpha: float = 0.5):
+        """Initialize S-measure (Structure-measure) evaluator.
 
         Args:
-            alpha: the weight for balancing the object score and the region score
+            alpha (float, optional): Weight for balancing the object score and the region score. Higher values give more weight to object-level similarity. Valid range: [0, 1]. Defaults to 0.5 for equal weighting.
         """
         self.sms = []
         self.alpha = alpha
@@ -205,10 +217,16 @@ class Smeasure(object):
         self.sms.append(sm)
 
     def cal_sm(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        """Calculate the S-measure.
+        """Calculate the S-measure (Structure-measure) score.
+
+        Computes a weighted combination of object-aware and region-aware structural similarity scores. For edge cases (all foreground or all background), returns simplified metrics.
+
+        Args:
+            pred (np.ndarray): Normalized prediction map with values in [0, 1].
+            gt (np.ndarray): Binary ground truth mask.
 
         Returns:
-            s-measure
+            float: S-measure score in range [0, 1], where higher is better.
         """
         y = np.mean(gt)
         if y == 0:
@@ -222,13 +240,33 @@ class Smeasure(object):
         return sm
 
     def s_object(self, x: np.ndarray) -> float:
+        """Calculate object-aware score for a region.
+
+        Computes a similarity score that considers both mean and standard deviation of the input region.
+
+        Args:
+            x (np.ndarray): Input region data.
+
+        Returns:
+            float: Object-aware similarity score.
+        """
         mean = np.mean(x)
         std = np.std(x, ddof=1)
         score = 2 * mean / (np.power(mean, 2) + 1 + std + EPS)
         return score
 
     def object(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        """Calculate the object score."""
+        """Calculate the object-level structural similarity score.
+
+        Evaluates structural similarity separately for foreground and background regions, then combines them using the ratio of foreground pixels.
+
+        Args:
+            pred (np.ndarray): Normalized prediction map with values in [0, 1].
+            gt (np.ndarray): Binary ground truth mask.
+
+        Returns:
+            float: Object-level similarity score.
+        """
         gt_mean = np.mean(gt)
         fg_score = self.s_object(pred[gt]) * gt_mean
         bg_score = self.s_object((1 - pred)[~gt]) * (1 - gt_mean)
@@ -236,7 +274,17 @@ class Smeasure(object):
         return object_score
 
     def region(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        """Calculate the region score."""
+        """Calculate the region-level structural similarity score.
+
+        Divides the image into four quadrants based on the foreground centroid, then calculates SSIM for each quadrant weighted by its area.
+
+        Args:
+            pred (np.ndarray): Normalized prediction map with values in [0, 1].
+            gt (np.ndarray): Binary ground truth mask.
+
+        Returns:
+            float: Region-level similarity score.
+        """
         h, w = gt.shape
         area = h * w
 
@@ -263,7 +311,17 @@ class Smeasure(object):
         return score_lt + score_rt + score_lb + score_rb
 
     def ssim(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        """Calculate the ssim score."""
+        """Calculate the SSIM (Structural Similarity Index) score.
+
+        Computes structural similarity based on luminance, contrast, and structure comparisons between prediction and ground truth regions.
+
+        Args:
+            pred (np.ndarray): Prediction region.
+            gt (np.ndarray): Ground truth region.
+
+        Returns:
+            float: SSIM score in range [0, 1].
+        """
         h, w = pred.shape
         N = h * w
 
@@ -295,22 +353,25 @@ class Smeasure(object):
         return dict(sm=sm)
 
 
-class Emeasure(object):
+class Emeasure:
+    """E-measure assesses binary foreground map quality by measuring the alignment between prediction and ground truth using an enhanced alignment matrix. It addresses limitations of traditional metrics by considering spatial alignment and local/global pixel matching.
+
+    ```
+    @inproceedings{Emeasure,
+        title="Enhanced-alignment Measure for Binary Foreground Map Evaluation",
+        author="Deng-Ping {Fan} and Cheng {Gong} and Yang {Cao} and Bo {Ren} and Ming-Ming {Cheng} and Ali {Borji}",
+        booktitle=IJCAI,
+        pages="698--704",
+        year={2018}
+    }
+    ```
+
+    Note:
+        More implementation details: https://www.yuque.com/lart/blog/lwgt38
+    """
+
     def __init__(self):
-        """E-measure(Enhanced-alignment Measure) for SOD.
-
-        More details about the implementation can be found in https://www.yuque.com/lart/blog/lwgt38
-
-        ```
-        @inproceedings{Emeasure,
-            title="Enhanced-alignment Measure for Binary Foreground Map Evaluation",
-            author="Deng-Ping {Fan} and Cheng {Gong} and Yang {Cao} and Bo {Ren} and Ming-Ming {Cheng} and Ali {Borji}",
-            booktitle=IJCAI,
-            pages="698--704",
-            year={2018}
-        }
-        ```
-        """
+        """Initialize E-measure (Enhanced-alignment Measure) evaluator."""
         self.adaptive_ems = []
         self.changeable_ems = []
 
@@ -333,31 +394,53 @@ class Emeasure(object):
         self.adaptive_ems.append(adaptive_em)
 
     def cal_adaptive_em(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        """Calculate the adaptive E-measure.
+        """Calculate the adaptive E-measure using an adaptive threshold.
+
+        Uses twice the mean prediction value as the adaptive threshold to binarize the prediction before computing E-measure.
+
+        Args:
+            pred (np.ndarray): Normalized prediction map with values in [0, 1].
+            gt (np.ndarray): Binary ground truth mask.
 
         Returns:
-            adaptive_em
+            float: Adaptive E-measure score.
         """
         adaptive_threshold = get_adaptive_threshold(pred, max_value=1)
         adaptive_em = self.cal_em_with_threshold(pred, gt, threshold=adaptive_threshold)
         return adaptive_em
 
     def cal_changeable_em(self, pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
-        """Calculate the changeable E-measure, which can be used to obtain the mean E-measure, the maximum E-measure and the E-measure-threshold curve.
+        """Calculate E-measure scores across all thresholds from 0 to 255.
+
+        Computes the E-measure for 257 different thresholds, enabling analysis of maximum E-measure, mean E-measure, and E-measure-threshold curves.
+
+        Args:
+            pred (np.ndarray): Normalized prediction map with values in [0, 1].
+            gt (np.ndarray): Binary ground truth mask.
 
         Returns:
-            changeable_ems
+            np.ndarray: Array of 257 E-measure scores corresponding to thresholds [0, 255].
         """
         changeable_ems = self.cal_em_with_cumsumhistogram(pred, gt)
         return changeable_ems
 
     def cal_em_with_threshold(self, pred: np.ndarray, gt: np.ndarray, threshold: float) -> float:
-        """Calculate the E-measure corresponding to the specific threshold.
+        """Calculate the E-measure for a specific binarization threshold.
 
-        Variable naming rules within the function:
-        `[pred attribute(foreground fg, background bg)]_[gt attribute(foreground fg, background bg)]_[meaning]`
+        Computes enhanced alignment based on four regions: true positives, false positives, false negatives, and true negatives.
 
-        If only `pred` or `gt` is considered, another corresponding attribute location is replaced with '`_`'.
+        Args:
+            pred (np.ndarray): Normalized prediction map with values in [0, 1].
+            gt (np.ndarray): Binary ground truth mask.
+            threshold (float): Binarization threshold value.
+
+        Returns:
+            float: E-measure score for the given threshold.
+
+        Note:
+            Variable naming convention:
+            `[pred_attr(fg/bg)]_[gt_attr(fg/bg)]_[meaning]`
+            '_' indicates don't-care attribute.
         """
         binarized_pred = pred >= threshold
         fg_fg_numel = np.count_nonzero(binarized_pred & gt)
@@ -433,6 +516,17 @@ class Emeasure(object):
         return em
 
     def generate_parts_numel_combinations(self, fg_fg_numel, fg_bg_numel, pred_fg_numel, pred_bg_numel):
+        """Generate the number of elements in each part of the image.
+
+        Args:
+            fg_fg_numel (int): Number of foreground pixels in the foreground region.
+            fg_bg_numel (int): Number of foreground pixels in the background region.
+            pred_fg_numel (int): Number of foreground pixels in the predicted region.
+            pred_bg_numel (int): Number of background pixels in the predicted region.
+
+        Returns:
+            tuple: A tuple containing the number of elements in each part of the image.
+        """
         bg_fg_numel = self.gt_fg_numel - fg_fg_numel
         bg_bg_numel = pred_bg_numel - bg_fg_numel
 
@@ -465,22 +559,26 @@ class Emeasure(object):
         return dict(em=dict(adp=adaptive_em, curve=changeable_em))
 
 
-class WeightedFmeasure(object):
-    def __init__(self, beta: float = 1):
-        """Weighted F-measure for SOD.
+class WeightedFmeasure:
+    """Weighted F-measure considers both pixel dependency and pixel importance when evaluating foreground maps. It weights different pixels according to their distance from the foreground boundary to provide a more perceptually meaningful assessment than standard F-measure.
 
-        ```
-        @inproceedings{wFmeasure,
-            title={How to eval foreground maps?},
-            author={Margolin, Ran and Zelnik-Manor, Lihi and Tal, Ayellet},
-            booktitle=CVPR,
-            pages={248--255},
-            year={2014}
-        }
-        ```
+    ```
+    @inproceedings{wFmeasure,
+        title={How to eval foreground maps?},
+        author={Margolin, Ran and Zelnik-Manor, Lihi and Tal, Ayellet},
+        booktitle=CVPR,
+        pages={248--255},
+        year={2014}
+    }
+    ```
+    """
+
+    def __init__(self, beta: float = 1):
+        """Initialize Weighted F-measure evaluator.
 
         Args:
-            beta (float): the weight of the precision
+            beta (float, optional): Weight for balancing precision and recall.
+                Defaults to 1 for equal weighting (F1-score).
         """
         self.beta = beta
         self.weighted_fms = []
@@ -502,7 +600,19 @@ class WeightedFmeasure(object):
         self.weighted_fms.append(wfm)
 
     def cal_wfm(self, pred: np.ndarray, gt: np.ndarray) -> float:
-        """Calculate the weighted F-measure."""
+        """Calculate the weighted F-measure score.
+
+        Implements the weighted F-measure algorithm that considers:
+        1. Pixel dependency: Uses error at closest GT edge for background pixels
+        2. Pixel importance: Weights errors by distance from foreground
+
+        Args:
+            pred (np.ndarray): Normalized prediction map with values in [0, 1].
+            gt (np.ndarray): Binary ground truth mask.
+
+        Returns:
+            float: Weighted F-measure score based on weighted precision and recall.
+        """
         # [Dst,IDXT] = bwdist(dGT);
         Dst, Idxt = bwdist(gt == 0, return_indices=True)
 
@@ -546,8 +656,16 @@ class WeightedFmeasure(object):
         return Q
 
     def matlab_style_gauss2D(self, shape: tuple = (7, 7), sigma: int = 5) -> np.ndarray:
-        """2D gaussian mask - should give the same result as MATLAB's:
-        `fspecial('gaussian',[shape],[sigma])`
+        """Generate a 2D Gaussian kernel compatible with MATLAB's fspecial.
+
+        Creates a normalized 2D Gaussian kernel that matches MATLAB's `fspecial('gaussian', [shape], sigma)` output.
+
+        Args:
+            shape (tuple, optional): Kernel size as (height, width). Defaults to (7, 7).
+            sigma (int, optional): Standard deviation of the Gaussian. Defaults to 5.
+
+        Returns:
+            np.ndarray: Normalized 2D Gaussian kernel.
         """
         m, n = [(ss - 1) / 2 for ss in shape]
         y, x = np.ogrid[-m : m + 1, -n : n + 1]
@@ -568,20 +686,26 @@ class WeightedFmeasure(object):
         return dict(wfm=weighted_fm)
 
 
-class HumanCorrectionEffortMeasure(object):
+class HumanCorrectionEffortMeasure:
+    """Human Correction Effort Measure for Dichotomous Image Segmentation.
+
+    ```
+    @inproceedings{HumanCorrectionEffortMeasure,
+        title = {Highly Accurate Dichotomous Image Segmentation},
+        author = {Xuebin Qin and Hang Dai and Xiaobin Hu and Deng-Ping Fan and Ling Shao and Luc Van Gool},
+        booktitle = ECCV,
+        year = {2022}
+    }
+    ```
+    """
+
     def __init__(self, relax: int = 5, epsilon: float = 2.0):
-        """Human Correction Effort Measure for Dichotomous Image Segmentation.
+        """Initialize the Human Correction Effort Measure.
 
-        ```
-        @inproceedings{HumanCorrectionEffortMeasure,
-            title = {Highly Accurate Dichotomous Image Segmentation},
-            author = {Xuebin Qin and Hang Dai and Xiaobin Hu and Deng-Ping Fan and Ling Shao and Luc Van Gool},
-            booktitle = ECCV,
-            year = {2022}
-        }
-        ```
+        Args:
+            relax (int, optional): The number of relaxations. Defaults to 5.
+            epsilon (float, optional): The epsilon value. Defaults to 2.0.
         """
-
         self.hces = []
         self.relax = relax
         self.epsilon = epsilon
@@ -601,6 +725,15 @@ class HumanCorrectionEffortMeasure(object):
         self.hces.append(hce)
 
     def cal_hce(self, pred: np.ndarray, gt: np.ndarray) -> float:
+        """Calculate the Human Correction Effort (HCE) for a pair of prediction and ground truth.
+
+        Args:
+            pred (np.ndarray): Prediction, gray scale image.
+            gt (np.ndarray): Ground truth, gray scale image.
+
+        Returns:
+            float: The HCE value.
+        """
         gt_skeleton = morphology.skeletonize(gt).astype(bool)
         pred = pred > 0.5
 
@@ -644,9 +777,7 @@ class HumanCorrectionEffortMeasure(object):
         return poly_FP_point_cnt + indep_cnt_FP + poly_FN_point_cnt + indep_cnt_FN
 
     def filter_conditional_boundary(self, contours: list, mask: np.ndarray, condition: np.ndarray):
-        """
-        Filter boundary segments based on a given condition mask and compute
-        the number of independent connected regions that require human correction.
+        """Filter boundary segments based on a given condition mask and compute the number of independent connected regions that require human correction.
 
         Args:
             contours (List[np.ndarray]): List of boundary contours (OpenCV format).
@@ -708,9 +839,7 @@ class HumanCorrectionEffortMeasure(object):
         return boundaries, independent_flags.sum()
 
     def count_polygon_control_points(self, boundaries: list, epsilon: float = 1.0) -> int:
-        """
-        Approximate each boundary using the Ramer-Douglas-Peucker (RDP) algorithm
-        and count the total number of control points of all approximated polygons.
+        """Approximate each boundary using the Ramer-Douglas-Peucker (RDP) algorithm and count the total number of control points of all approximated polygons.
 
         Args:
             boundaries (List[np.ndarray]): List of boundary contours.
@@ -731,5 +860,10 @@ class HumanCorrectionEffortMeasure(object):
         return num_points
 
     def get_results(self) -> dict:
+        """Return the results about HCE.
+
+        Returns:
+            dict(hce=hce)
+        """
         hce = np.mean(np.array(self.hces, dtype=TYPE))
         return dict(hce=hce)

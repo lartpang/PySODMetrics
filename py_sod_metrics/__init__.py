@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from py_sod_metrics.context_measure import CamouflageContextMeasure, ContextMeasure
 from py_sod_metrics.fmeasurev2 import (
     BERHandler,
