@@ -73,7 +73,6 @@ class ContextMeasure:
 
         # Reverse deduction: measure ground truth completeness
         reverse = self._reverse_deduction(pred, gt, K)
-
         wreverse = np.sum(reverse * (gt + cd)) / (np.sum(gt) + np.sum(cd) + EPS)
 
         # F-measure style combination
@@ -342,6 +341,4 @@ class CamouflageContextMeasure(ContextMeasure):
             dict(ccm=camouflage_context_measure)
         """
         ccm = np.mean(np.array(self.scores, dtype=TYPE))
-        return dict(ccm=ccm)
-        return dict(ccm=ccm)
         return dict(ccm=ccm)
