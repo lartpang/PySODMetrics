@@ -1,0 +1,621 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>py_sod_metrics.fmeasurev2 &mdash; PySODMetrics 1.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=72d88caf"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            PySODMetrics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metrics.html">Supported Metrics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PySODMetrics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">py_sod_metrics.fmeasurev2</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for py_sod_metrics.fmeasurev2</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">abc</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE</span><span class="p">,</span> <span class="n">get_adaptive_threshold</span><span class="p">,</span> <span class="n">validate_and_normalize_input</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_BaseHandler</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for all metric handlers.</span>
+
+<span class="sd">    Provides common functionality for calculating various segmentation metrics.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">with_dynamic</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">with_adaptive</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">with_binary</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">sample_based</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the base handler.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.</span>
+<span class="sd">            with_adaptive (bool, optional): Record adaptive results for adp version.</span>
+<span class="sd">            with_binary (bool, optional): Record binary results for binary version.</span>
+<span class="sd">            sample_based (bool, optional): Whether to average the metric of each sample or calculate</span>
+<span class="sd">                the metric of the dataset. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">with_dynamic</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">with_adaptive</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_based</span> <span class="o">=</span> <span class="n">sample_based</span>
+        <span class="k">if</span> <span class="n">with_binary</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_based</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">binary_results</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">binary_results</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;tp&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;fp&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;tn&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">binary_results</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the metric value.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            tp: True positive count(s)</span>
+<span class="sd">            fp: False positive count(s)</span>
+<span class="sd">            tn: True negative count(s)</span>
+<span class="sd">            fn: False negative count(s)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Calculated metric value(s)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">divide</span><span class="p">(</span><span class="n">numerator</span><span class="p">,</span> <span class="n">denominator</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Safe division with numpy arrays handling zero denominators.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            numerator: Numerator value(s)</span>
+<span class="sd">            denominator: Denominator value(s)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Result of division with zero handling</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">denominator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">denominator</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">numerator</span><span class="p">,</span> <span class="n">denominator</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">denominator</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">denominator</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">denominator</span>
+
+
+<div class="viewcode-block" id="IOUHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.IOUHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">IOUHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Intersection over Union.</span>
+
+<span class="sd">    iou = tp / (tp + fp + fn)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="IOUHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.IOUHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate IoU from confusion matrix components.&quot;&quot;&quot;</span>
+        <span class="c1"># ious = np.where(Ps + FNs == 0, 0, TPs / (Ps + FNs))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">tp</span><span class="p">,</span> <span class="n">tp</span> <span class="o">+</span> <span class="n">fp</span> <span class="o">+</span> <span class="n">fn</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="SpecificityHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.SpecificityHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SpecificityHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Specificity.</span>
+
+<span class="sd">    True negative rate (TNR)/specificity (SPC)/selectivity</span>
+
+<span class="sd">    specificity = tn / (tn + fp)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SpecificityHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.SpecificityHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate specificity from confusion matrix components.&quot;&quot;&quot;</span>
+        <span class="c1"># specificities = np.where(TNs + FPs == 0, 0, TNs / (TNs + FPs))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">tn</span><span class="p">,</span> <span class="n">tn</span> <span class="o">+</span> <span class="n">fp</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="n">TNRHandler</span> <span class="o">=</span> <span class="n">SpecificityHandler</span>
+
+
+<div class="viewcode-block" id="DICEHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.DICEHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DICEHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;DICE.</span>
+
+<span class="sd">    dice = 2 * tp / (tp + fn + tp + fp)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="DICEHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.DICEHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate DICE coefficient from confusion matrix components.&quot;&quot;&quot;</span>
+        <span class="c1"># dices = np.where(TPs + FPs == 0, 0, 2 * TPs / (T + Ps))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">tp</span><span class="p">,</span> <span class="n">tp</span> <span class="o">+</span> <span class="n">fn</span> <span class="o">+</span> <span class="n">tp</span> <span class="o">+</span> <span class="n">fp</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="OverallAccuracyHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.OverallAccuracyHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">OverallAccuracyHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Overall Accuracy.</span>
+
+<span class="sd">    oa = overall_accuracy = (tp + tn) / (tp + fp + tn + fn)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="OverallAccuracyHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.OverallAccuracyHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate overall accuracy from confusion matrix components.&quot;&quot;&quot;</span>
+        <span class="c1"># dices = np.where(TPs + FPs == 0, 0, 2 * TPs / (T + Ps))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">tp</span> <span class="o">+</span> <span class="n">tn</span><span class="p">,</span> <span class="n">tp</span> <span class="o">+</span> <span class="n">fp</span> <span class="o">+</span> <span class="n">tn</span> <span class="o">+</span> <span class="n">fn</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="KappaHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.KappaHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">KappaHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Kappa Accuracy.</span>
+
+<span class="sd">    kappa = kappa = (oa - p_) / (1 - p_)</span>
+<span class="sd">    p_ = [(tp + fp)(tp + fn) + (tn + fn)(tn + tp)] / (tp + fp + tn + fn)^2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="KappaHandler.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.KappaHandler.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">with_dynamic</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">with_adaptive</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">with_binary</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">sample_based</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the Kappa handler.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.</span>
+<span class="sd">            with_adaptive (bool, optional): Record adaptive results for adp version.</span>
+<span class="sd">            with_binary (bool, optional): Record binary results for binary version.</span>
+<span class="sd">            sample_based (bool, optional): Whether to average the metric of each sample or calculate</span>
+<span class="sd">                the metric of the dataset. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">with_dynamic</span><span class="o">=</span><span class="n">with_dynamic</span><span class="p">,</span>
+            <span class="n">with_adaptive</span><span class="o">=</span><span class="n">with_adaptive</span><span class="p">,</span>
+            <span class="n">with_binary</span><span class="o">=</span><span class="n">with_binary</span><span class="p">,</span>
+            <span class="n">sample_based</span><span class="o">=</span><span class="n">sample_based</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">oa</span> <span class="o">=</span> <span class="n">OverallAccuracyHandler</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="KappaHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.KappaHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate Kappa coefficient from confusion matrix components.&quot;&quot;&quot;</span>
+        <span class="n">oa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">oa</span><span class="p">(</span><span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="n">hpy_p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">tp</span> <span class="o">+</span> <span class="n">fp</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">tp</span> <span class="o">+</span> <span class="n">fn</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">tn</span> <span class="o">+</span> <span class="n">fn</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">tn</span> <span class="o">+</span> <span class="n">tp</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">tp</span> <span class="o">+</span> <span class="n">fp</span> <span class="o">+</span> <span class="n">tn</span> <span class="o">+</span> <span class="n">fn</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">oa</span> <span class="o">-</span> <span class="n">hpy_p</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">hpy_p</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="PrecisionHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.PrecisionHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PrecisionHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Precision.</span>
+
+<span class="sd">    precision = tp / (tp + fp)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="PrecisionHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.PrecisionHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate precision from confusion matrix components.&quot;&quot;&quot;</span>
+        <span class="c1"># precisions = np.where(Ps == 0, 0, TPs / Ps)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">tp</span><span class="p">,</span> <span class="n">tp</span> <span class="o">+</span> <span class="n">fp</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="RecallHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.RecallHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">RecallHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Recall.</span>
+
+<span class="sd">    True positive rate (TPR)/recall/sensitivity (SEN)/probability of detection/hit rate/power</span>
+
+<span class="sd">    recall = tp / (tp + fn)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="RecallHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.RecallHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate recall from confusion matrix components.&quot;&quot;&quot;</span>
+        <span class="c1"># recalls = np.where(TPs == 0, 0, TPs / T)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">tp</span><span class="p">,</span> <span class="n">tp</span> <span class="o">+</span> <span class="n">fn</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="n">TPRHandler</span> <span class="o">=</span> <span class="n">RecallHandler</span>
+<span class="n">SensitivityHandler</span> <span class="o">=</span> <span class="n">RecallHandler</span>
+
+
+<div class="viewcode-block" id="FPRHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FPRHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FPRHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;False Positive Rate.</span>
+
+<span class="sd">    False positive rate (FPR)/probability of false alarm/fall-out</span>
+
+<span class="sd">    fpr = fp / (tn + fp)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="FPRHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FPRHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate false positive rate from confusion matrix components.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">tn</span> <span class="o">+</span> <span class="n">fp</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="BERHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.BERHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BERHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Balance Error Rate.</span>
+
+<span class="sd">    ber = 1 - 0.5 * (tp / (tp + fn) + tn / (tn + fp))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="BERHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.BERHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate balanced error rate from confusion matrix components.&quot;&quot;&quot;</span>
+        <span class="n">fg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tp</span> <span class="o">+</span> <span class="n">fn</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">)</span>
+        <span class="n">bg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tn</span> <span class="o">+</span> <span class="n">fp</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">tp</span><span class="p">,</span> <span class="n">fg</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">fg</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">fg</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">tn</span><span class="p">,</span> <span class="n">bg</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">bg</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">bg</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">fg</span> <span class="o">+</span> <span class="n">bg</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FmeasureHandler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureHandler">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FmeasureHandler</span><span class="p">(</span><span class="n">_BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;F-measure.</span>
+
+<span class="sd">    fmeasure = (beta + 1) * precision * recall / (beta * precision + recall)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="FmeasureHandler.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureHandler.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">with_dynamic</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">with_adaptive</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">with_binary</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">sample_based</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the F-measure handler.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.</span>
+<span class="sd">            with_adaptive (bool, optional): Record adaptive results for adp version.</span>
+<span class="sd">            with_binary (bool, optional): Record binary results for binary version.</span>
+<span class="sd">            sample_based (bool, optional): Whether to average the metric of each sample or calculate</span>
+<span class="sd">                the metric of the dataset. Defaults to True.</span>
+<span class="sd">            beta (bool, optional): β^2 in F-measure. Defaults to 0.3.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">with_dynamic</span><span class="o">=</span><span class="n">with_dynamic</span><span class="p">,</span>
+            <span class="n">with_adaptive</span><span class="o">=</span><span class="n">with_adaptive</span><span class="p">,</span>
+            <span class="n">with_binary</span><span class="o">=</span><span class="n">with_binary</span><span class="p">,</span>
+            <span class="n">sample_based</span><span class="o">=</span><span class="n">sample_based</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">beta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precision</span> <span class="o">=</span> <span class="n">PrecisionHandler</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recall</span> <span class="o">=</span> <span class="n">RecallHandler</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FmeasureHandler.__call__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureHandler.__call__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate F-measure from confusion matrix components.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Uses separate precision and recall calculations to maintain consistency with original implementation rather than combined formula.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision</span><span class="p">(</span><span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">recall</span><span class="p">(</span><span class="n">tp</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">divide</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">p</span> <span class="o">*</span> <span class="n">r</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">*</span> <span class="n">p</span> <span class="o">+</span> <span class="n">r</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FmeasureV2">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureV2">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FmeasureV2</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Enhanced F-measure evaluator with support for multiple evaluation metrics.</span>
+
+<span class="sd">    This class provides a flexible framework for computing various binary classification metrics including precision, recall, specificity, dice, IoU, and F-measure. It supports dynamic thresholding, adaptive thresholding, and binary evaluation modes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="FmeasureV2.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureV2.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metric_handlers</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Enhanced Fmeasure class with more relevant metrics, e.g. precision, recall, specificity, dice, iou, fmeasure and so on.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            metric_handlers (dict, optional): Handlers of different metrics. Defaults to None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metric_handlers</span> <span class="o">=</span> <span class="n">metric_handlers</span> <span class="k">if</span> <span class="n">metric_handlers</span> <span class="k">else</span> <span class="p">{}</span></div>
+
+
+<div class="viewcode-block" id="FmeasureV2.add_handler">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureV2.add_handler">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handler_name</span><span class="p">,</span> <span class="n">metric_handler</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a metric handler to the evaluator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            handler_name (str): Name identifier for the metric handler.</span>
+<span class="sd">            metric_handler: Handler instance that computes the specific metric.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metric_handlers</span><span class="p">[</span><span class="n">handler_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">metric_handler</span></div>
+
+
+<div class="viewcode-block" id="FmeasureV2.get_statistics">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureV2.get_statistics">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_statistics</span><span class="p">(</span><span class="n">binary</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">FG</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">BG</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the TP, FP, TN and FN based a adaptive threshold.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            binary (np.ndarray): binarized `pred` containing [0, 1]</span>
+<span class="sd">            gt (np.ndarray): gt binarized by 128</span>
+<span class="sd">            FG (int): the number of foreground pixels in gt</span>
+<span class="sd">            BG (int): the number of background pixels in gt</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: TP, FP, TN, FN</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">TP</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">binary</span><span class="p">[</span><span class="n">gt</span><span class="p">])</span>
+        <span class="n">FP</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">binary</span><span class="p">[</span><span class="o">~</span><span class="n">gt</span><span class="p">])</span>
+        <span class="n">FN</span> <span class="o">=</span> <span class="n">FG</span> <span class="o">-</span> <span class="n">TP</span>
+        <span class="n">TN</span> <span class="o">=</span> <span class="n">BG</span> <span class="o">-</span> <span class="n">FP</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;tp&quot;</span><span class="p">:</span> <span class="n">TP</span><span class="p">,</span> <span class="s2">&quot;fp&quot;</span><span class="p">:</span> <span class="n">FP</span><span class="p">,</span> <span class="s2">&quot;tn&quot;</span><span class="p">:</span> <span class="n">TN</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">:</span> <span class="n">FN</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="FmeasureV2.adaptively_binarizing">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureV2.adaptively_binarizing">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">adaptively_binarizing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">FG</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">BG</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the TP, FP, TN and FN based a adaptive threshold.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): prediction normalized in [0, 1]</span>
+<span class="sd">            gt (np.ndarray): gt binarized by 128</span>
+<span class="sd">            FG (int): the number of foreground pixels in gt</span>
+<span class="sd">            BG (int): the number of background pixels in gt</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: TP, FP, TN, FN</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">adaptive_threshold</span> <span class="o">=</span> <span class="n">get_adaptive_threshold</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">binary</span> <span class="o">=</span> <span class="n">pred</span> <span class="o">&gt;=</span> <span class="n">adaptive_threshold</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_statistics</span><span class="p">(</span><span class="n">binary</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">FG</span><span class="p">,</span> <span class="n">BG</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FmeasureV2.dynamically_binarizing">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureV2.dynamically_binarizing">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dynamically_binarizing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">FG</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">BG</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the corresponding TP, FP, TN and FNs when the threshold changes from 0 to 255.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): prediction normalized in [0, 1]</span>
+<span class="sd">            gt (np.ndarray): gt binarized by 128</span>
+<span class="sd">            FG (int): the number of foreground pixels in gt</span>
+<span class="sd">            BG (int): the number of background pixels in gt</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: TPs, FPs, TNs, FNs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># 1. 获取预测结果在真值前背景区域中的直方图</span>
+        <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="n">bins</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">257</span><span class="p">)</span>
+        <span class="n">tp_hist</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="n">gt</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>  <span class="c1"># 最后一个bin为[255, 256]</span>
+        <span class="n">fp_hist</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="o">~</span><span class="n">gt</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+
+        <span class="c1"># 2. 使用累积直方图（Cumulative Histogram）获得对应真值前背景中大于不同阈值的像素数量</span>
+        <span class="c1"># 这里使用累加（cumsum）就是为了一次性得出 &gt;=不同阈值 的像素数量, 这里仅计算了前景区域</span>
+        <span class="n">tp_w_thrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">tp_hist</span><span class="p">))</span>  <span class="c1"># &gt;= 255, &gt;= 254, ... &gt;= 1, &gt;= 0</span>
+        <span class="n">fp_w_thrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">fp_hist</span><span class="p">))</span>
+
+        <span class="c1"># 3. 计算对应的TP,FP,TN,FN</span>
+        <span class="n">TPs</span> <span class="o">=</span> <span class="n">tp_w_thrs</span>  <span class="c1"># 前景 预测为 前景</span>
+        <span class="n">FPs</span> <span class="o">=</span> <span class="n">fp_w_thrs</span>  <span class="c1"># 背景 预测为 前景</span>
+        <span class="n">FNs</span> <span class="o">=</span> <span class="n">FG</span> <span class="o">-</span> <span class="n">TPs</span>  <span class="c1"># 前景 预测为 背景</span>
+        <span class="n">TNs</span> <span class="o">=</span> <span class="n">BG</span> <span class="o">-</span> <span class="n">FPs</span>  <span class="c1"># 背景 预测为 背景</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;tp&quot;</span><span class="p">:</span> <span class="n">TPs</span><span class="p">,</span> <span class="s2">&quot;fp&quot;</span><span class="p">:</span> <span class="n">FPs</span><span class="p">,</span> <span class="s2">&quot;tn&quot;</span><span class="p">:</span> <span class="n">TNs</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">:</span> <span class="n">FNs</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="FmeasureV2.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureV2.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Statistics the metrics for the pair of pred and gt.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metric_handlers</span><span class="p">:</span>  <span class="c1"># 没有添加metric_handler</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Please add your metric handler before using `step()`.&quot;</span><span class="p">)</span>
+
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="p">)</span>
+
+        <span class="n">FG</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>  <span class="c1"># 真实前景, FG=(TPs+FNs)</span>
+        <span class="n">BG</span> <span class="o">=</span> <span class="n">gt</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">FG</span>  <span class="c1"># 真实背景, BG=(TNs+FPs)</span>
+
+        <span class="n">dynamical_tpfptnfn</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">adaptive_tpfptnfn</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">binary_tpfptnfn</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">handler_name</span><span class="p">,</span> <span class="n">handler</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metric_handlers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dynamical_tpfptnfn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">dynamical_tpfptnfn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamically_binarizing</span><span class="p">(</span><span class="n">pred</span><span class="o">=</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">,</span> <span class="n">FG</span><span class="o">=</span><span class="n">FG</span><span class="p">,</span> <span class="n">BG</span><span class="o">=</span><span class="n">BG</span><span class="p">)</span>
+                <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">handler</span><span class="p">(</span><span class="o">**</span><span class="n">dynamical_tpfptnfn</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">adaptive_tpfptnfn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">adaptive_tpfptnfn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adaptively_binarizing</span><span class="p">(</span><span class="n">pred</span><span class="o">=</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">,</span> <span class="n">FG</span><span class="o">=</span><span class="n">FG</span><span class="p">,</span> <span class="n">BG</span><span class="o">=</span><span class="n">BG</span><span class="p">)</span>
+                <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">handler</span><span class="p">(</span><span class="o">**</span><span class="n">adaptive_tpfptnfn</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">binary_tpfptnfn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># `pred &gt; 0.5`: Simulating the effect of the `argmax` function.</span>
+                    <span class="n">binary_tpfptnfn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_statistics</span><span class="p">(</span><span class="n">binary</span><span class="o">=</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">,</span> <span class="n">FG</span><span class="o">=</span><span class="n">FG</span><span class="p">,</span> <span class="n">BG</span><span class="o">=</span><span class="n">BG</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">sample_based</span><span class="p">:</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">handler</span><span class="p">(</span><span class="o">**</span><span class="n">binary_tpfptnfn</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="s2">&quot;tp&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">binary_tpfptnfn</span><span class="p">[</span><span class="s2">&quot;tp&quot;</span><span class="p">]</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="s2">&quot;fp&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">binary_tpfptnfn</span><span class="p">[</span><span class="s2">&quot;fp&quot;</span><span class="p">]</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="s2">&quot;tn&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">binary_tpfptnfn</span><span class="p">[</span><span class="s2">&quot;tn&quot;</span><span class="p">]</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="s2">&quot;fn&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">binary_tpfptnfn</span><span class="p">[</span><span class="s2">&quot;fn&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="FmeasureV2.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.fmeasurev2.FmeasureV2.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results of the specific metric names.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: All results corresponding to different metrics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">handler_name</span><span class="p">,</span> <span class="n">handler</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metric_handlers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">res</span><span class="p">[</span><span class="s2">&quot;dynamic&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">res</span><span class="p">[</span><span class="s2">&quot;adaptive&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">sample_based</span><span class="p">:</span>
+                    <span class="n">res</span><span class="p">[</span><span class="s2">&quot;binary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># NOTE: use `np.mean` to simplify output format (`array(123)` -&gt; `123`)</span>
+                    <span class="n">res</span><span class="p">[</span><span class="s2">&quot;binary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">handler</span><span class="p">(</span><span class="o">**</span><span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">))</span>
+            <span class="n">results</span><span class="p">[</span><span class="n">handler_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, lartpang.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

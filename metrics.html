@@ -1,0 +1,418 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supported Metrics &mdash; PySODMetrics 1.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=72d88caf"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api.html" />
+    <link rel="prev" title="Usage Guide" href="usage.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            PySODMetrics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Supported Metrics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-metrics">Basic Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#mae-mean-absolute-error">MAE (Mean Absolute Error)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#s-measure-structure-measure">S-measure (Structure Measure)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#e-measure-enhanced-alignment-measure">E-measure (Enhanced-alignment Measure)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#f-measure">F-measure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#weighted-f-measure">Weighted F-measure</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-metrics">Advanced Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fmeasurev2-framework">FmeasureV2 Framework</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#context-measure">Context-Measure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#multi-scale-iou-msiou">Multi-Scale IoU (MSIoU)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#human-correction-effort-measure">Human Correction Effort Measure</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#size-invariant-metrics">Size-Invariant Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#size-invariant-f-measure">Size-Invariant F-measure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#size-invariant-mae">Size-Invariant MAE</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#metric-comparison-table">Metric Comparison Table</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PySODMetrics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Supported Metrics</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/metrics.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="supported-metrics">
+<h1>Supported Metrics<a class="headerlink" href="#supported-metrics" title="Link to this heading"></a></h1>
+<p>This page provides detailed information about all the metrics supported by PySODMetrics.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>PySODMetrics provides two types of metric computation:</p>
+<ul class="simple">
+<li><p><strong>Sample-based</strong>: Metrics are computed for each sample individually and then aggregated</p></li>
+<li><p><strong>Whole-based</strong>: Metrics are computed across all samples globally</p></li>
+</ul>
+<p>Most metrics support different aggregation strategies:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">max</span></code>: Maximum value across all thresholds</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">avg</span></code>: Average value across all thresholds</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">adp</span></code>: Adaptive threshold (2 × mean of predictions)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bin</span></code>: Binary threshold (typically 0.5 or fixed threshold)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">si-*</span></code>: Size-invariant variants for handling multi-scale objects</p></li>
+</ul>
+</section>
+<section id="basic-metrics">
+<h2>Basic Metrics<a class="headerlink" href="#basic-metrics" title="Link to this heading"></a></h2>
+<section id="mae-mean-absolute-error">
+<h3>MAE (Mean Absolute Error)<a class="headerlink" href="#mae-mean-absolute-error" title="Link to this heading"></a></h3>
+<p>Measures the pixel-wise absolute difference between prediction and ground truth.</p>
+<div class="math notranslate nohighlight">
+\[MAE = \frac{1}{W \times H} \sum_{x=1}^{W} \sum_{y=1}^{H} |P(x,y) - G(x,y)|\]</div>
+<p>where <span class="math notranslate nohighlight">\(P\)</span> is the prediction, <span class="math notranslate nohighlight">\(G\)</span> is the ground truth, and <span class="math notranslate nohighlight">\(W \times H\)</span> is the image size.</p>
+<p><strong>Reference:</strong></p>
+<p>Perazzi et al., “Saliency filters: Contrast based filtering for salient region detection”, CVPR 2012</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">MAE</span>
+
+<span class="n">mae</span> <span class="o">=</span> <span class="n">MAE</span><span class="p">()</span>
+<span class="n">mae</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">mae</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MAE: </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;mae&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="s-measure-structure-measure">
+<h3>S-measure (Structure Measure)<a class="headerlink" href="#s-measure-structure-measure" title="Link to this heading"></a></h3>
+<p>Evaluates structural similarity between prediction and ground truth, considering both region-aware and object-aware components.</p>
+<div class="math notranslate nohighlight">
+\[S_m = \alpha \cdot S_o + (1 - \alpha) \cdot S_r\]</div>
+<p>where <span class="math notranslate nohighlight">\(S_o\)</span> is the object-aware structural similarity and <span class="math notranslate nohighlight">\(S_r\)</span> is the region-aware structural similarity.</p>
+<p><strong>Reference:</strong></p>
+<p>Fan et al., “Structure-measure: A new way to evaluate foreground maps”, ICCV 2017</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Smeasure</span>
+
+<span class="n">sm</span> <span class="o">=</span> <span class="n">Smeasure</span><span class="p">()</span>
+<span class="n">sm</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;S-measure: </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;sm&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="e-measure-enhanced-alignment-measure">
+<h3>E-measure (Enhanced-alignment Measure)<a class="headerlink" href="#e-measure-enhanced-alignment-measure" title="Link to this heading"></a></h3>
+<p>Captures both local and global matching information between prediction and ground truth.</p>
+<p><strong>Reference:</strong></p>
+<p>Fan et al., “Enhanced-alignment Measure for Binary Foreground Map Evaluation”, IJCAI 2018</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Emeasure</span>
+
+<span class="n">em</span> <span class="o">=</span> <span class="n">Emeasure</span><span class="p">()</span>
+<span class="n">em</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">em</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Max E-measure: </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;em&#39;</span><span class="p">][</span><span class="s1">&#39;adp&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Avg E-measure: </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;em&#39;</span><span class="p">][</span><span class="s1">&#39;avg&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="f-measure">
+<h3>F-measure<a class="headerlink" href="#f-measure" title="Link to this heading"></a></h3>
+<p>Harmonic mean of precision and recall.</p>
+<div class="math notranslate nohighlight">
+\[F_\beta = \frac{(1 + \beta^2) \times Precision \times Recall}{\beta^2 \times Precision + Recall}\]</div>
+<p><strong>Reference:</strong></p>
+<p>Achanta et al., “Frequency-tuned salient region detection”, CVPR 2009</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Fmeasure</span>
+
+<span class="n">fm</span> <span class="o">=</span> <span class="n">Fmeasure</span><span class="p">()</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Max F-measure: </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;fm&#39;</span><span class="p">][</span><span class="s1">&#39;adp&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="weighted-f-measure">
+<h3>Weighted F-measure<a class="headerlink" href="#weighted-f-measure" title="Link to this heading"></a></h3>
+<p>A weighted version of F-measure that assigns different importance to different pixels based on their location.</p>
+<p><strong>Reference:</strong></p>
+<p>Margolin et al., “How to evaluate foreground maps?”, CVPR 2014</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">WeightedFmeasure</span>
+
+<span class="n">wfm</span> <span class="o">=</span> <span class="n">WeightedFmeasure</span><span class="p">()</span>
+<span class="n">wfm</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">wfm</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Weighted F-measure: </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;wfm&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="advanced-metrics">
+<h2>Advanced Metrics<a class="headerlink" href="#advanced-metrics" title="Link to this heading"></a></h2>
+<section id="fmeasurev2-framework">
+<h3>FmeasureV2 Framework<a class="headerlink" href="#fmeasurev2-framework" title="Link to this heading"></a></h3>
+<p>A flexible framework for computing multiple binary classification metrics using different handlers.</p>
+<p><strong>Supported Handlers:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">FmeasureHandler</span></code>: F-measure with configurable β</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PrecisionHandler</span></code>: Precision (Positive Predictive Value)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RecallHandler</span></code>: Recall (Sensitivity, TPR)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">IOUHandler</span></code>: Intersection over Union</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DICEHandler</span></code>: Dice coefficient</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BERHandler</span></code>: Balanced Error Rate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">KappaHandler</span></code>: Cohen’s Kappa</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OverallAccuracyHandler</span></code>: Overall classification accuracy</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SpecificityHandler</span></code>: Specificity (TNR)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SensitivityHandler</span></code>: Sensitivity (same as Recall)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FPRHandler</span></code>: False Positive Rate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TNRHandler</span></code>: True Negative Rate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TPRHandler</span></code>: True Positive Rate</p></li>
+</ul>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">FmeasureV2</span><span class="p">,</span> <span class="n">FmeasureHandler</span><span class="p">,</span> <span class="n">IOUHandler</span>
+
+<span class="n">fm_v2</span> <span class="o">=</span> <span class="n">FmeasureV2</span><span class="p">(</span>
+    <span class="n">handlers</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;fm&quot;</span><span class="p">:</span> <span class="n">FmeasureHandler</span><span class="p">(</span><span class="n">beta</span><span class="o">=</span><span class="mf">0.3</span><span class="p">),</span>
+        <span class="s2">&quot;iou&quot;</span><span class="p">:</span> <span class="n">IOUHandler</span><span class="p">(),</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="n">fm_v2</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">fm_v2</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="context-measure">
+<h3>Context-Measure<a class="headerlink" href="#context-measure" title="Link to this heading"></a></h3>
+<p>Designed specifically for camouflaged object detection, considering contextual information.</p>
+<p><strong>Reference:</strong></p>
+<p>Wang et al., “Context-measure: Contextualizing Metric for Camouflage”, arXiv 2025</p>
+<p><strong>Variants:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ContextMeasure</span></code>: Standard context measure <span class="math notranslate nohighlight">\(C_\beta\)</span></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CamouflageContextMeasure</span></code>: Weighted context measure <span class="math notranslate nohighlight">\(C^\omega_\beta\)</span></p></li>
+</ul>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContextMeasure</span><span class="p">,</span> <span class="n">CamouflageContextMeasure</span>
+
+<span class="n">cm</span> <span class="o">=</span> <span class="n">ContextMeasure</span><span class="p">()</span>
+<span class="n">ccm</span> <span class="o">=</span> <span class="n">CamouflageContextMeasure</span><span class="p">()</span>
+
+<span class="n">cm</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">ccm</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="multi-scale-iou-msiou">
+<h3>Multi-Scale IoU (MSIoU)<a class="headerlink" href="#multi-scale-iou-msiou" title="Link to this heading"></a></h3>
+<p>Evaluates segmentation quality across multiple scales, particularly useful for fine structures.</p>
+<p><strong>Reference:</strong></p>
+<p>Ahmadzadeh et al., “Multiscale IOU: A Metric for Evaluation of Salient Object Detection with Fine Structures”, ICIP 2021</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">MSIoU</span>
+
+<span class="n">msiou</span> <span class="o">=</span> <span class="n">MSIoU</span><span class="p">()</span>
+<span class="n">msiou</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">msiou</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="human-correction-effort-measure">
+<h3>Human Correction Effort Measure<a class="headerlink" href="#human-correction-effort-measure" title="Link to this heading"></a></h3>
+<p>Estimates the effort required for humans to correct prediction errors.</p>
+<p><strong>Reference:</strong></p>
+<p>Qin et al., “Highly Accurate Dichotomous Image Segmentation”, ECCV 2022</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">HumanCorrectionEffortMeasure</span>
+
+<span class="n">hcem</span> <span class="o">=</span> <span class="n">HumanCorrectionEffortMeasure</span><span class="p">()</span>
+<span class="n">hcem</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">hcem</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="size-invariant-metrics">
+<h2>Size-Invariant Metrics<a class="headerlink" href="#size-invariant-metrics" title="Link to this heading"></a></h2>
+<p>For datasets with objects at multiple scales, size-invariant variants provide more balanced evaluation.</p>
+<section id="size-invariant-f-measure">
+<h3>Size-Invariant F-measure<a class="headerlink" href="#size-invariant-f-measure" title="Link to this heading"></a></h3>
+<p><strong>Reference:</strong></p>
+<p>Li et al., “Size-invariance Matters: Rethinking Metrics and Losses for Imbalanced Multi-object Salient Object Detection”, ICML 2024</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">SizeInvarianceFmeasureV2</span>
+
+<span class="n">si_fm</span> <span class="o">=</span> <span class="n">SizeInvarianceFmeasureV2</span><span class="p">()</span>
+<span class="n">si_fm</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">si_fm</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SI F-measure (avg): </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;fm&#39;</span><span class="p">][</span><span class="s1">&#39;si-avg&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="size-invariant-mae">
+<h3>Size-Invariant MAE<a class="headerlink" href="#size-invariant-mae" title="Link to this heading"></a></h3>
+<p><strong>Usage:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">py_sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">SizeInvarianceMAE</span>
+
+<span class="n">si_mae</span> <span class="o">=</span> <span class="n">SizeInvarianceMAE</span><span class="p">()</span>
+<span class="n">si_mae</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">si_mae</span><span class="o">.</span><span class="n">get_results</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="metric-comparison-table">
+<h2>Metric Comparison Table<a class="headerlink" href="#metric-comparison-table" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Metric</p></th>
+<th class="head"><p>Sample-based</p></th>
+<th class="head"><p>Whole-based</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>MAE</p></td>
+<td><p>soft, si-soft</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-odd"><td><p>S-measure</p></td>
+<td><p>soft</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-even"><td><p>Weighted F-measure</p></td>
+<td><p>soft</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-odd"><td><p>Human Correction Effort</p></td>
+<td><p>soft</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-even"><td><p>Context-Measure</p></td>
+<td><p>soft</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-odd"><td><p>Multi-Scale IoU</p></td>
+<td><p>max,avg,adp,bin</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-even"><td><p>E-measure</p></td>
+<td><p>max,avg,adp</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-odd"><td><p>F-measure (V2)</p></td>
+<td><p>max,avg,adp,bin,si</p></td>
+<td><p>bin,si</p></td>
+</tr>
+<tr class="row-even"><td><p>BER, Dice, IoU, Precision, Recall, etc.</p></td>
+<td><p>max,avg,adp,bin,si</p></td>
+<td><p>bin,si</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>soft</strong>: Metrics that work directly on continuous prediction values</p></li>
+<li><p><strong>si-</strong>: Size-invariant variants that normalize by object size</p></li>
+<li><p><strong>adp</strong>: Adaptive thresholding based on prediction statistics</p></li>
+<li><p>For detailed mathematical formulations, please refer to the original papers cited above</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="usage.html" class="btn btn-neutral float-left" title="Usage Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, lartpang.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

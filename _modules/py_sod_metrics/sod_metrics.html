@@ -1,0 +1,1102 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>py_sod_metrics.sod_metrics &mdash; PySODMetrics 1.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=72d88caf"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            PySODMetrics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metrics.html">Supported Metrics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PySODMetrics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">py_sod_metrics.sod_metrics</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for py_sod_metrics.sod_metrics</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">convolve</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">distance_transform_edt</span> <span class="k">as</span> <span class="n">bwdist</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">measure</span><span class="p">,</span> <span class="n">morphology</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">EPS</span><span class="p">,</span> <span class="n">TYPE</span><span class="p">,</span> <span class="n">get_adaptive_threshold</span><span class="p">,</span> <span class="n">validate_and_normalize_input</span>
+
+
+<div class="viewcode-block" id="Fmeasure">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Fmeasure">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Fmeasure</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;F-measure evaluator for salient object detection.</span>
+
+<span class="sd">    Computes precision, recall, and F-measure at multiple thresholds, supporting both adaptive and dynamic evaluation modes.</span>
+
+<span class="sd">    ```</span>
+<span class="sd">    @inproceedings{Fmeasure,</span>
+<span class="sd">        title={Frequency-tuned salient region detection},</span>
+<span class="sd">        author={Achanta, Radhakrishna and Hemami, Sheila and Estrada, Francisco and S{\&quot;u}sstrunk, Sabine},</span>
+<span class="sd">        booktitle=CVPR,</span>
+<span class="sd">        number={CONF},</span>
+<span class="sd">        pages={1597--1604},</span>
+<span class="sd">        year={2009}</span>
+<span class="sd">    }</span>
+<span class="sd">    ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Fmeasure.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Fmeasure.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the F-measure evaluator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            beta (float): the weight of the precision</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;This class will be removed in the future, please use FmeasureV2 instead!&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">beta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precisions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recalls</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_fms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">changeable_fms</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+
+<div class="viewcode-block" id="Fmeasure.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Fmeasure.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Statistics the metric for the pair of pred and gt.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="p">)</span>
+
+        <span class="n">adaptive_fm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_adaptive_fm</span><span class="p">(</span><span class="n">pred</span><span class="o">=</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_fms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">adaptive_fm</span><span class="p">)</span>
+
+        <span class="n">precisions</span><span class="p">,</span> <span class="n">recalls</span><span class="p">,</span> <span class="n">changeable_fms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_pr</span><span class="p">(</span><span class="n">pred</span><span class="o">=</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precisions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">precisions</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recalls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">recalls</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">changeable_fms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">changeable_fms</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Fmeasure.cal_adaptive_fm">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Fmeasure.cal_adaptive_fm">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_adaptive_fm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the adaptive F-measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: adaptive_fm</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># ``np.count_nonzero`` is faster and better</span>
+        <span class="n">adaptive_threshold</span> <span class="o">=</span> <span class="n">get_adaptive_threshold</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">binary_predcition</span> <span class="o">=</span> <span class="n">pred</span> <span class="o">&gt;=</span> <span class="n">adaptive_threshold</span>
+        <span class="n">area_intersection</span> <span class="o">=</span> <span class="n">binary_predcition</span><span class="p">[</span><span class="n">gt</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">area_intersection</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">adaptive_fm</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pre</span> <span class="o">=</span> <span class="n">area_intersection</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">binary_predcition</span><span class="p">)</span>
+            <span class="n">rec</span> <span class="o">=</span> <span class="n">area_intersection</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>
+            <span class="n">adaptive_fm</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">)</span> <span class="o">*</span> <span class="n">pre</span> <span class="o">*</span> <span class="n">rec</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">*</span> <span class="n">pre</span> <span class="o">+</span> <span class="n">rec</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">adaptive_fm</span></div>
+
+
+<div class="viewcode-block" id="Fmeasure.cal_pr">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Fmeasure.cal_pr">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_pr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the corresponding precision and recall when the threshold changes from 0 to 255.</span>
+
+<span class="sd">        These precisions and recalls can be used to obtain the mean F-measure, maximum F-measure,</span>
+<span class="sd">        precision-recall curve and F-measure-threshold curve.</span>
+
+<span class="sd">        For convenience, `changeable_fms` is provided here, which can be used directly to obtain</span>
+<span class="sd">        the mean F-measure, maximum F-measure and F-measure-threshold curve.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: (precisions, recalls, changeable_fms)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># 1. 获取预测结果在真值前背景区域中的直方图</span>
+        <span class="n">pred</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">257</span><span class="p">)</span>
+        <span class="n">fg_hist</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="n">gt</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>  <span class="c1"># 最后一个bin为[255, 256]</span>
+        <span class="n">bg_hist</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="o">~</span><span class="n">gt</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+        <span class="c1"># 2. 使用累积直方图（Cumulative Histogram）获得对应真值前背景中大于不同阈值的像素数量</span>
+        <span class="c1"># 这里使用累加（cumsum）就是为了一次性得出 &gt;=不同阈值 的像素数量, 这里仅计算了前景区域</span>
+        <span class="n">fg_w_thrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">fg_hist</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">bg_w_thrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">bg_hist</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># 3. 使用不同阈值的结果计算对应的precision和recall</span>
+        <span class="c1"># p和r的计算的真值是pred==1&amp;gt==1，二者仅有分母不同，分母前者是pred==1，后者是gt==1</span>
+        <span class="c1"># 为了同时计算不同阈值的结果，这里使用hsitogram&amp;flip&amp;cumsum 获得了不同各自的前景像素数量</span>
+        <span class="n">TPs</span> <span class="o">=</span> <span class="n">fg_w_thrs</span>
+        <span class="n">Ps</span> <span class="o">=</span> <span class="n">fg_w_thrs</span> <span class="o">+</span> <span class="n">bg_w_thrs</span>
+        <span class="c1"># 为防止除0，这里针对除0的情况分析后直接对于0分母设为1，因为此时分子必为0</span>
+        <span class="n">Ps</span><span class="p">[</span><span class="n">Ps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">gt</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># TODO: T=0 或者 特定阈值下fg_w_thrs=0或者bg_w_thrs=0，这些都会包含在TPs[i]=0的情况中，</span>
+        <span class="c1">#  但是这里使用TPs不便于处理列表</span>
+        <span class="n">precisions</span> <span class="o">=</span> <span class="n">TPs</span> <span class="o">/</span> <span class="n">Ps</span>
+        <span class="n">recalls</span> <span class="o">=</span> <span class="n">TPs</span> <span class="o">/</span> <span class="n">T</span>
+
+        <span class="n">numerator</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">)</span> <span class="o">*</span> <span class="n">precisions</span> <span class="o">*</span> <span class="n">recalls</span>
+        <span class="n">denominator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numerator</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">*</span> <span class="n">precisions</span> <span class="o">+</span> <span class="n">recalls</span><span class="p">)</span>
+        <span class="n">changeable_fms</span> <span class="o">=</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span>
+        <span class="k">return</span> <span class="n">precisions</span><span class="p">,</span> <span class="n">recalls</span><span class="p">,</span> <span class="n">changeable_fms</span></div>
+
+
+<div class="viewcode-block" id="Fmeasure.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Fmeasure.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results about F-measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict(fm=dict(adp=adaptive_fm, curve=changeable_fm), pr=dict(p=precision, r=recall))</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">adaptive_fm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adaptive_fms</span><span class="p">,</span> <span class="n">TYPE</span><span class="p">))</span>
+        <span class="n">changeable_fm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">changeable_fms</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">precision</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">precisions</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># N, 256</span>
+        <span class="n">recall</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recalls</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># N, 256</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">fm</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">adp</span><span class="o">=</span><span class="n">adaptive_fm</span><span class="p">,</span> <span class="n">curve</span><span class="o">=</span><span class="n">changeable_fm</span><span class="p">),</span> <span class="n">pr</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">precision</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="n">recall</span><span class="p">))</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="MAE">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.MAE">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MAE</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Mean Absolute Error.</span>
+
+<span class="sd">    Computes the MAE between predicted saliency maps and ground truth masks.</span>
+
+<span class="sd">    ```</span>
+<span class="sd">    @inproceedings{MAE,</span>
+<span class="sd">        title={Saliency filters: Contrast based filtering for salient region detection},</span>
+<span class="sd">        author={Perazzi, Federico and Kr{\&quot;a}henb{\&quot;u}hl, Philipp and Pritch, Yael and Hornung, Alexander},</span>
+<span class="sd">        booktitle=CVPR,</span>
+<span class="sd">        pages={733--740},</span>
+<span class="sd">        year={2012}</span>
+<span class="sd">    }</span>
+<span class="sd">    ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MAE.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.MAE.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the MAE evaluator.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maes</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+
+<div class="viewcode-block" id="MAE.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.MAE.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Statistics the metric for the pair of pred and gt.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="p">)</span>
+
+        <span class="n">mae</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_mae</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mae</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MAE.cal_mae">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.MAE.cal_mae">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_mae</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the mean absolute error.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: mae</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mae</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">pred</span> <span class="o">-</span> <span class="n">gt</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">mae</span></div>
+
+
+<div class="viewcode-block" id="MAE.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.MAE.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results about MAE.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict(mae=mae)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mae</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">maes</span><span class="p">,</span> <span class="n">TYPE</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">mae</span><span class="o">=</span><span class="n">mae</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="Smeasure">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Smeasure">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Smeasure</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;S-measure evaluates foreground maps by considering both object-aware and region-aware structural similarity between prediction and ground truth. It combines object-level and region-level scores to provide a comprehensive assessment of structural quality.</span>
+
+<span class="sd">    ```</span>
+<span class="sd">    @inproceedings{Smeasure,</span>
+<span class="sd">        title={Structure-measure: A new way to eval foreground maps},</span>
+<span class="sd">        author={Fan, Deng-Ping and Cheng, Ming-Ming and Liu, Yun and Li, Tao and Borji, Ali},</span>
+<span class="sd">        booktitle=ICCV,</span>
+<span class="sd">        pages={4548--4557},</span>
+<span class="sd">        year={2017}</span>
+<span class="sd">    }</span>
+<span class="sd">    ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Smeasure.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Smeasure.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize S-measure (Structure-measure) evaluator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            alpha (float, optional): Weight for balancing the object score and the region score. Higher values give more weight to object-level similarity. Valid range: [0, 1]. Defaults to 0.5 for equal weighting.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span></div>
+
+
+<div class="viewcode-block" id="Smeasure.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Smeasure.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Statistics the metric for the pair of pred and gt.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="p">)</span>
+
+        <span class="n">sm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_sm</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sm</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Smeasure.cal_sm">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Smeasure.cal_sm">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_sm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the S-measure (Structure-measure) score.</span>
+
+<span class="sd">        Computes a weighted combination of object-aware and region-aware structural similarity scores. For edge cases (all foreground or all background), returns simplified metrics.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Normalized prediction map with values in [0, 1].</span>
+<span class="sd">            gt (np.ndarray): Binary ground truth mask.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: S-measure score in range [0, 1], where higher is better.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">sm</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">object_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">object</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+            <span class="n">region_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+            <span class="n">sm</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">object_score</span> <span class="o">+</span> <span class="n">region_score</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sm</span></div>
+
+
+<div class="viewcode-block" id="Smeasure.s_object">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Smeasure.s_object">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">s_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate object-aware score for a region.</span>
+
+<span class="sd">        Computes a similarity score that considers both mean and standard deviation of the input region.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x (np.ndarray): Input region data.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: Object-aware similarity score.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">mean</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">std</span> <span class="o">+</span> <span class="n">EPS</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">score</span></div>
+
+
+<div class="viewcode-block" id="Smeasure.object">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Smeasure.object">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the object-level structural similarity score.</span>
+
+<span class="sd">        Evaluates structural similarity separately for foreground and background regions, then combines them using the ratio of foreground pixels.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Normalized prediction map with values in [0, 1].</span>
+<span class="sd">            gt (np.ndarray): Binary ground truth mask.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: Object-level similarity score.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gt_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>
+        <span class="n">fg_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_object</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="n">gt</span><span class="p">])</span> <span class="o">*</span> <span class="n">gt_mean</span>
+        <span class="n">bg_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_object</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pred</span><span class="p">)[</span><span class="o">~</span><span class="n">gt</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">gt_mean</span><span class="p">)</span>
+        <span class="n">object_score</span> <span class="o">=</span> <span class="n">fg_score</span> <span class="o">+</span> <span class="n">bg_score</span>
+        <span class="k">return</span> <span class="n">object_score</span></div>
+
+
+<div class="viewcode-block" id="Smeasure.region">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Smeasure.region">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">region</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the region-level structural similarity score.</span>
+
+<span class="sd">        Divides the image into four quadrants based on the foreground centroid, then calculates SSIM for each quadrant weighted by its area.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Normalized prediction map with values in [0, 1].</span>
+<span class="sd">            gt (np.ndarray): Binary ground truth mask.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: Region-level similarity score.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">gt</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">area</span> <span class="o">=</span> <span class="n">h</span> <span class="o">*</span> <span class="n">w</span>
+
+        <span class="c1"># Calculate the centroid coordinate of the foreground</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">cy</span><span class="p">,</span> <span class="n">cx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">h</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># More details can be found at: https://www.yuque.com/lart/blog/gpbigm</span>
+            <span class="n">cy</span><span class="p">,</span> <span class="n">cx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">()</span>
+        <span class="c1"># To ensure consistency with the matlab code, one is added to the centroid coordinate,</span>
+        <span class="c1"># so there is no need to use the redundant addition operation when dividing the region later,</span>
+        <span class="c1"># because the sequence generated by ``1:X`` in matlab will contain ``X``.</span>
+        <span class="n">cy</span><span class="p">,</span> <span class="n">cx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cy</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">cx</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># Use (x,y) to divide the ``pred`` and the ``gt`` into four submatrices, respectively.</span>
+        <span class="n">w_lt</span> <span class="o">=</span> <span class="n">cx</span> <span class="o">*</span> <span class="n">cy</span> <span class="o">/</span> <span class="n">area</span>
+        <span class="n">w_rt</span> <span class="o">=</span> <span class="n">cy</span> <span class="o">*</span> <span class="p">(</span><span class="n">w</span> <span class="o">-</span> <span class="n">cx</span><span class="p">)</span> <span class="o">/</span> <span class="n">area</span>
+        <span class="n">w_lb</span> <span class="o">=</span> <span class="p">(</span><span class="n">h</span> <span class="o">-</span> <span class="n">cy</span><span class="p">)</span> <span class="o">*</span> <span class="n">cx</span> <span class="o">/</span> <span class="n">area</span>
+        <span class="n">w_rb</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">w_lt</span> <span class="o">-</span> <span class="n">w_rt</span> <span class="o">-</span> <span class="n">w_lb</span>
+        <span class="n">score_lt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssim</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">cy</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">cx</span><span class="p">],</span> <span class="n">gt</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">cy</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">cx</span><span class="p">])</span> <span class="o">*</span> <span class="n">w_lt</span>
+        <span class="n">score_rt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssim</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">cy</span><span class="p">,</span> <span class="n">cx</span><span class="p">:</span><span class="n">w</span><span class="p">],</span> <span class="n">gt</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">cy</span><span class="p">,</span> <span class="n">cx</span><span class="p">:</span><span class="n">w</span><span class="p">])</span> <span class="o">*</span> <span class="n">w_rt</span>
+        <span class="n">score_lb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssim</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="n">cy</span><span class="p">:</span><span class="n">h</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">cx</span><span class="p">],</span> <span class="n">gt</span><span class="p">[</span><span class="n">cy</span><span class="p">:</span><span class="n">h</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">cx</span><span class="p">])</span> <span class="o">*</span> <span class="n">w_lb</span>
+        <span class="n">score_rb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssim</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="n">cy</span><span class="p">:</span><span class="n">h</span><span class="p">,</span> <span class="n">cx</span><span class="p">:</span><span class="n">w</span><span class="p">],</span> <span class="n">gt</span><span class="p">[</span><span class="n">cy</span><span class="p">:</span><span class="n">h</span><span class="p">,</span> <span class="n">cx</span><span class="p">:</span><span class="n">w</span><span class="p">])</span> <span class="o">*</span> <span class="n">w_rb</span>
+        <span class="k">return</span> <span class="n">score_lt</span> <span class="o">+</span> <span class="n">score_rt</span> <span class="o">+</span> <span class="n">score_lb</span> <span class="o">+</span> <span class="n">score_rb</span></div>
+
+
+<div class="viewcode-block" id="Smeasure.ssim">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Smeasure.ssim">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ssim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the SSIM (Structural Similarity Index) score.</span>
+
+<span class="sd">        Computes structural similarity based on luminance, contrast, and structure comparisons between prediction and ground truth regions.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction region.</span>
+<span class="sd">            gt (np.ndarray): Ground truth region.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: SSIM score in range [0, 1].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">pred</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">h</span> <span class="o">*</span> <span class="n">w</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>
+
+        <span class="n">sigma_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">pred</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">sigma_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">gt</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">sigma_xy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">pred</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">gt</span> <span class="o">-</span> <span class="n">y</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">alpha</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">y</span> <span class="o">*</span> <span class="n">sigma_xy</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">sigma_x</span> <span class="o">+</span> <span class="n">sigma_y</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">alpha</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">/</span> <span class="p">(</span><span class="n">beta</span> <span class="o">+</span> <span class="n">EPS</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">alpha</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">beta</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">score</span></div>
+
+
+<div class="viewcode-block" id="Smeasure.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Smeasure.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results about S-measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict(sm=sm)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sms</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">sm</span><span class="o">=</span><span class="n">sm</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="Emeasure">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Emeasure">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Emeasure</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;E-measure assesses binary foreground map quality by measuring the alignment between prediction and ground truth using an enhanced alignment matrix. It addresses limitations of traditional metrics by considering spatial alignment and local/global pixel matching.</span>
+
+<span class="sd">    ```</span>
+<span class="sd">    @inproceedings{Emeasure,</span>
+<span class="sd">        title=&quot;Enhanced-alignment Measure for Binary Foreground Map Evaluation&quot;,</span>
+<span class="sd">        author=&quot;Deng-Ping {Fan} and Cheng {Gong} and Yang {Cao} and Bo {Ren} and Ming-Ming {Cheng} and Ali {Borji}&quot;,</span>
+<span class="sd">        booktitle=IJCAI,</span>
+<span class="sd">        pages=&quot;698--704&quot;,</span>
+<span class="sd">        year={2018}</span>
+<span class="sd">    }</span>
+<span class="sd">    ```</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        More implementation details: https://www.yuque.com/lart/blog/lwgt38</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Emeasure.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Emeasure.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize E-measure (Enhanced-alignment Measure) evaluator.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_ems</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">changeable_ems</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+
+<div class="viewcode-block" id="Emeasure.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Emeasure.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Statistics the metric for the pair of pred and gt.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">gt_fg_numel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gt_size</span> <span class="o">=</span> <span class="n">gt</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">gt</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">changeable_ems</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_changeable_em</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">changeable_ems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">changeable_ems</span><span class="p">)</span>
+        <span class="n">adaptive_em</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_adaptive_em</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_ems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">adaptive_em</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Emeasure.cal_adaptive_em">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Emeasure.cal_adaptive_em">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_adaptive_em</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the adaptive E-measure using an adaptive threshold.</span>
+
+<span class="sd">        Uses twice the mean prediction value as the adaptive threshold to binarize the prediction before computing E-measure.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Normalized prediction map with values in [0, 1].</span>
+<span class="sd">            gt (np.ndarray): Binary ground truth mask.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: Adaptive E-measure score.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">adaptive_threshold</span> <span class="o">=</span> <span class="n">get_adaptive_threshold</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">adaptive_em</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_em_with_threshold</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">adaptive_threshold</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">adaptive_em</span></div>
+
+
+<div class="viewcode-block" id="Emeasure.cal_changeable_em">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Emeasure.cal_changeable_em">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_changeable_em</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate E-measure scores across all thresholds from 0 to 255.</span>
+
+<span class="sd">        Computes the E-measure for 257 different thresholds, enabling analysis of maximum E-measure, mean E-measure, and E-measure-threshold curves.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Normalized prediction map with values in [0, 1].</span>
+<span class="sd">            gt (np.ndarray): Binary ground truth mask.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: Array of 257 E-measure scores corresponding to thresholds [0, 255].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">changeable_ems</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_em_with_cumsumhistogram</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">changeable_ems</span></div>
+
+
+<div class="viewcode-block" id="Emeasure.cal_em_with_threshold">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Emeasure.cal_em_with_threshold">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_em_with_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the E-measure for a specific binarization threshold.</span>
+
+<span class="sd">        Computes enhanced alignment based on four regions: true positives, false positives, false negatives, and true negatives.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Normalized prediction map with values in [0, 1].</span>
+<span class="sd">            gt (np.ndarray): Binary ground truth mask.</span>
+<span class="sd">            threshold (float): Binarization threshold value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: E-measure score for the given threshold.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Variable naming convention:</span>
+<span class="sd">            `[pred_attr(fg/bg)]_[gt_attr(fg/bg)]_[meaning]`</span>
+<span class="sd">            &#39;_&#39; indicates don&#39;t-care attribute.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">binarized_pred</span> <span class="o">=</span> <span class="n">pred</span> <span class="o">&gt;=</span> <span class="n">threshold</span>
+        <span class="n">fg_fg_numel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">binarized_pred</span> <span class="o">&amp;</span> <span class="n">gt</span><span class="p">)</span>
+        <span class="n">fg_bg_numel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">binarized_pred</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">gt</span><span class="p">)</span>
+
+        <span class="n">fg___numel</span> <span class="o">=</span> <span class="n">fg_fg_numel</span> <span class="o">+</span> <span class="n">fg_bg_numel</span>
+        <span class="n">bg___numel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_size</span> <span class="o">-</span> <span class="n">fg___numel</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_fg_numel</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">enhanced_matrix_sum</span> <span class="o">=</span> <span class="n">bg___numel</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_fg_numel</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_size</span><span class="p">:</span>
+            <span class="n">enhanced_matrix_sum</span> <span class="o">=</span> <span class="n">fg___numel</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">parts_numel</span><span class="p">,</span> <span class="n">combinations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_parts_numel_combinations</span><span class="p">(</span>
+                <span class="n">fg_fg_numel</span><span class="o">=</span><span class="n">fg_fg_numel</span><span class="p">,</span>
+                <span class="n">fg_bg_numel</span><span class="o">=</span><span class="n">fg_bg_numel</span><span class="p">,</span>
+                <span class="n">pred_fg_numel</span><span class="o">=</span><span class="n">fg___numel</span><span class="p">,</span>
+                <span class="n">pred_bg_numel</span><span class="o">=</span><span class="n">bg___numel</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">results_parts</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">part_numel</span><span class="p">,</span> <span class="n">combination</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">parts_numel</span><span class="p">,</span> <span class="n">combinations</span><span class="p">)):</span>
+                <span class="n">align_matrix_value</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">combination</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">combination</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">combination</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">combination</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">EPS</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">enhanced_matrix_value</span> <span class="o">=</span> <span class="p">(</span><span class="n">align_matrix_value</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">4</span>
+                <span class="n">results_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">enhanced_matrix_value</span> <span class="o">*</span> <span class="n">part_numel</span><span class="p">)</span>
+            <span class="n">enhanced_matrix_sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">results_parts</span><span class="p">)</span>
+
+        <span class="n">em</span> <span class="o">=</span> <span class="n">enhanced_matrix_sum</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gt_size</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">EPS</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">em</span></div>
+
+
+<div class="viewcode-block" id="Emeasure.cal_em_with_cumsumhistogram">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Emeasure.cal_em_with_cumsumhistogram">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_em_with_cumsumhistogram</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the E-measure corresponding to the threshold that varies from 0 to 255..</span>
+
+<span class="sd">        Variable naming rules within the function:</span>
+<span class="sd">        `[pred attribute(foreground fg, background bg)]_[gt attribute(foreground fg, background bg)]_[meaning]`</span>
+
+<span class="sd">        If only `pred` or `gt` is considered, another corresponding attribute location is replaced with &#39;`_`&#39;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">257</span><span class="p">)</span>
+        <span class="n">fg_fg_hist</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="n">gt</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+        <span class="n">fg_bg_hist</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="o">~</span><span class="n">gt</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+        <span class="n">fg_fg_numel_w_thrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">fg_fg_hist</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">fg_bg_numel_w_thrs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">fg_bg_hist</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">fg___numel_w_thrs</span> <span class="o">=</span> <span class="n">fg_fg_numel_w_thrs</span> <span class="o">+</span> <span class="n">fg_bg_numel_w_thrs</span>
+        <span class="n">bg___numel_w_thrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_size</span> <span class="o">-</span> <span class="n">fg___numel_w_thrs</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_fg_numel</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">enhanced_matrix_sum</span> <span class="o">=</span> <span class="n">bg___numel_w_thrs</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_fg_numel</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_size</span><span class="p">:</span>
+            <span class="n">enhanced_matrix_sum</span> <span class="o">=</span> <span class="n">fg___numel_w_thrs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">parts_numel_w_thrs</span><span class="p">,</span> <span class="n">combinations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_parts_numel_combinations</span><span class="p">(</span>
+                <span class="n">fg_fg_numel</span><span class="o">=</span><span class="n">fg_fg_numel_w_thrs</span><span class="p">,</span>
+                <span class="n">fg_bg_numel</span><span class="o">=</span><span class="n">fg_bg_numel_w_thrs</span><span class="p">,</span>
+                <span class="n">pred_fg_numel</span><span class="o">=</span><span class="n">fg___numel_w_thrs</span><span class="p">,</span>
+                <span class="n">pred_bg_numel</span><span class="o">=</span><span class="n">bg___numel_w_thrs</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">results_parts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">256</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">part_numel</span><span class="p">,</span> <span class="n">combination</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">parts_numel_w_thrs</span><span class="p">,</span> <span class="n">combinations</span><span class="p">)):</span>
+                <span class="n">align_matrix_value</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">combination</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">combination</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">combination</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">combination</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">EPS</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">enhanced_matrix_value</span> <span class="o">=</span> <span class="p">(</span><span class="n">align_matrix_value</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">4</span>
+                <span class="n">results_parts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">enhanced_matrix_value</span> <span class="o">*</span> <span class="n">part_numel</span>
+            <span class="n">enhanced_matrix_sum</span> <span class="o">=</span> <span class="n">results_parts</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">em</span> <span class="o">=</span> <span class="n">enhanced_matrix_sum</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gt_size</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">EPS</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">em</span></div>
+
+
+<div class="viewcode-block" id="Emeasure.generate_parts_numel_combinations">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Emeasure.generate_parts_numel_combinations">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate_parts_numel_combinations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fg_fg_numel</span><span class="p">,</span> <span class="n">fg_bg_numel</span><span class="p">,</span> <span class="n">pred_fg_numel</span><span class="p">,</span> <span class="n">pred_bg_numel</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate the number of elements in each part of the image.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            fg_fg_numel (int): Number of foreground pixels in the foreground region.</span>
+<span class="sd">            fg_bg_numel (int): Number of foreground pixels in the background region.</span>
+<span class="sd">            pred_fg_numel (int): Number of foreground pixels in the predicted region.</span>
+<span class="sd">            pred_bg_numel (int): Number of background pixels in the predicted region.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing the number of elements in each part of the image.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">bg_fg_numel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_fg_numel</span> <span class="o">-</span> <span class="n">fg_fg_numel</span>
+        <span class="n">bg_bg_numel</span> <span class="o">=</span> <span class="n">pred_bg_numel</span> <span class="o">-</span> <span class="n">bg_fg_numel</span>
+
+        <span class="n">parts_numel</span> <span class="o">=</span> <span class="p">[</span><span class="n">fg_fg_numel</span><span class="p">,</span> <span class="n">fg_bg_numel</span><span class="p">,</span> <span class="n">bg_fg_numel</span><span class="p">,</span> <span class="n">bg_bg_numel</span><span class="p">]</span>
+
+        <span class="n">mean_pred_value</span> <span class="o">=</span> <span class="n">pred_fg_numel</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_size</span>
+        <span class="n">mean_gt_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_fg_numel</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt_size</span>
+
+        <span class="n">demeaned_pred_fg_value</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">mean_pred_value</span>
+        <span class="n">demeaned_pred_bg_value</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">-</span> <span class="n">mean_pred_value</span>
+        <span class="n">demeaned_gt_fg_value</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">mean_gt_value</span>
+        <span class="n">demeaned_gt_bg_value</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">-</span> <span class="n">mean_gt_value</span>
+
+        <span class="n">combinations</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">demeaned_pred_fg_value</span><span class="p">,</span> <span class="n">demeaned_gt_fg_value</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">demeaned_pred_fg_value</span><span class="p">,</span> <span class="n">demeaned_gt_bg_value</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">demeaned_pred_bg_value</span><span class="p">,</span> <span class="n">demeaned_gt_fg_value</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">demeaned_pred_bg_value</span><span class="p">,</span> <span class="n">demeaned_gt_bg_value</span><span class="p">),</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">parts_numel</span><span class="p">,</span> <span class="n">combinations</span></div>
+
+
+<div class="viewcode-block" id="Emeasure.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.Emeasure.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results about E-measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict(em=dict(adp=adaptive_em, curve=changeable_em))</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">adaptive_em</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adaptive_ems</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>
+        <span class="n">changeable_em</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">changeable_ems</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">em</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">adp</span><span class="o">=</span><span class="n">adaptive_em</span><span class="p">,</span> <span class="n">curve</span><span class="o">=</span><span class="n">changeable_em</span><span class="p">))</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="WeightedFmeasure">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.WeightedFmeasure">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WeightedFmeasure</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Weighted F-measure considers both pixel dependency and pixel importance when evaluating foreground maps. It weights different pixels according to their distance from the foreground boundary to provide a more perceptually meaningful assessment than standard F-measure.</span>
+
+<span class="sd">    ```</span>
+<span class="sd">    @inproceedings{wFmeasure,</span>
+<span class="sd">        title={How to eval foreground maps?},</span>
+<span class="sd">        author={Margolin, Ran and Zelnik-Manor, Lihi and Tal, Ayellet},</span>
+<span class="sd">        booktitle=CVPR,</span>
+<span class="sd">        pages={248--255},</span>
+<span class="sd">        year={2014}</span>
+<span class="sd">    }</span>
+<span class="sd">    ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="WeightedFmeasure.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.WeightedFmeasure.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize Weighted F-measure evaluator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            beta (float, optional): Weight for balancing precision and recall.</span>
+<span class="sd">                Defaults to 1 for equal weighting (F1-score).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">beta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weighted_fms</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+
+<div class="viewcode-block" id="WeightedFmeasure.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.WeightedFmeasure.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Statistics the metric for the pair of pred and gt.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="o">~</span><span class="n">gt</span><span class="p">):</span>
+            <span class="n">wfm</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">wfm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_wfm</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weighted_fms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wfm</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WeightedFmeasure.cal_wfm">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.WeightedFmeasure.cal_wfm">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_wfm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the weighted F-measure score.</span>
+
+<span class="sd">        Implements the weighted F-measure algorithm that considers:</span>
+<span class="sd">        1. Pixel dependency: Uses error at closest GT edge for background pixels</span>
+<span class="sd">        2. Pixel importance: Weights errors by distance from foreground</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Normalized prediction map with values in [0, 1].</span>
+<span class="sd">            gt (np.ndarray): Binary ground truth mask.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: Weighted F-measure score based on weighted precision and recall.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># [Dst,IDXT] = bwdist(dGT);</span>
+        <span class="n">Dst</span><span class="p">,</span> <span class="n">Idxt</span> <span class="o">=</span> <span class="n">bwdist</span><span class="p">(</span><span class="n">gt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">return_indices</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># %Pixel dependency</span>
+        <span class="c1"># E = abs(FG-dGT);</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">pred</span> <span class="o">-</span> <span class="n">gt</span><span class="p">)</span>
+        <span class="c1"># Et = E;</span>
+        <span class="c1"># Et(~GT)=Et(IDXT(~GT)); %To deal correctly with the edges of the foreground region</span>
+        <span class="n">Et</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">E</span><span class="p">)</span>
+        <span class="n">Et</span><span class="p">[</span><span class="n">gt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">Et</span><span class="p">[</span><span class="n">Idxt</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">gt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="n">Idxt</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">gt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]]</span>
+
+        <span class="c1"># K = fspecial(&#39;gaussian&#39;,7,5);</span>
+        <span class="c1"># EA = imfilter(Et,K);</span>
+        <span class="n">K</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">matlab_style_gauss2D</span><span class="p">((</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">EA</span> <span class="o">=</span> <span class="n">convolve</span><span class="p">(</span><span class="n">Et</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span> <span class="n">cval</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># MIN_E_EA = E;</span>
+        <span class="c1"># MIN_E_EA(GT &amp; EA&lt;E) = EA(GT &amp; EA&lt;E);</span>
+        <span class="n">MIN_E_EA</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">gt</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">EA</span> <span class="o">&lt;</span> <span class="n">E</span><span class="p">),</span> <span class="n">EA</span><span class="p">,</span> <span class="n">E</span><span class="p">)</span>
+
+        <span class="c1"># %Pixel importance</span>
+        <span class="c1"># B = ones(size(GT));</span>
+        <span class="c1"># B(~GT) = 2-1*exp(log(1-0.5)/5.*Dst(~GT));</span>
+        <span class="c1"># Ew = MIN_E_EA.*B;</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">gt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">/</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">Dst</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">gt</span><span class="p">))</span>
+        <span class="n">Ew</span> <span class="o">=</span> <span class="n">MIN_E_EA</span> <span class="o">*</span> <span class="n">B</span>
+
+        <span class="c1"># TPw = sum(dGT(:)) - sum(sum(Ew(GT)));</span>
+        <span class="c1"># FPw = sum(sum(Ew(~GT)));</span>
+        <span class="n">TPw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Ew</span><span class="p">[</span><span class="n">gt</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">FPw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Ew</span><span class="p">[</span><span class="n">gt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># R = 1- mean2(Ew(GT)); %Weighed Recall</span>
+        <span class="c1"># P = TPw./(eps+TPw+FPw); %Weighted Precision</span>
+        <span class="c1"># 注意这里使用mask索引矩阵的时候不可使用Ew[gt]，这实际上仅在索引Ew的0维度</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">Ew</span><span class="p">[</span><span class="n">gt</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">TPw</span> <span class="o">/</span> <span class="p">(</span><span class="n">TPw</span> <span class="o">+</span> <span class="n">FPw</span> <span class="o">+</span> <span class="n">EPS</span><span class="p">)</span>
+
+        <span class="c1"># % Q = (1+Beta^2)*(R*P)./(eps+R+(Beta.*P));</span>
+        <span class="n">Q</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">)</span> <span class="o">*</span> <span class="n">R</span> <span class="o">*</span> <span class="n">P</span> <span class="o">/</span> <span class="p">(</span><span class="n">R</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">*</span> <span class="n">P</span> <span class="o">+</span> <span class="n">EPS</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Q</span></div>
+
+
+<div class="viewcode-block" id="WeightedFmeasure.matlab_style_gauss2D">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.WeightedFmeasure.matlab_style_gauss2D">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">matlab_style_gauss2D</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate a 2D Gaussian kernel compatible with MATLAB&#39;s fspecial.</span>
+
+<span class="sd">        Creates a normalized 2D Gaussian kernel that matches MATLAB&#39;s `fspecial(&#39;gaussian&#39;, [shape], sigma)` output.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            shape (tuple, optional): Kernel size as (height, width). Defaults to (7, 7).</span>
+<span class="sd">            sigma (int, optional): Standard deviation of the Gaussian. Defaults to 5.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: Normalized 2D Gaussian kernel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">m</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="p">[(</span><span class="n">ss</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">ss</span> <span class="ow">in</span> <span class="n">shape</span><span class="p">]</span>
+        <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ogrid</span><span class="p">[</span><span class="o">-</span><span class="n">m</span> <span class="p">:</span> <span class="n">m</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="n">n</span> <span class="p">:</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span> <span class="o">*</span> <span class="n">y</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">))</span>
+        <span class="n">h</span><span class="p">[</span><span class="n">h</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">*</span> <span class="n">h</span><span class="o">.</span><span class="n">max</span><span class="p">()]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sumh</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">sumh</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">h</span> <span class="o">/=</span> <span class="n">sumh</span>
+        <span class="k">return</span> <span class="n">h</span></div>
+
+
+<div class="viewcode-block" id="WeightedFmeasure.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.WeightedFmeasure.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results about weighted F-measure.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict(wfm=weighted_fm)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weighted_fm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weighted_fms</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">wfm</span><span class="o">=</span><span class="n">weighted_fm</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="HumanCorrectionEffortMeasure">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.HumanCorrectionEffortMeasure">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">HumanCorrectionEffortMeasure</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Human Correction Effort Measure for Dichotomous Image Segmentation.</span>
+
+<span class="sd">    ```</span>
+<span class="sd">    @inproceedings{HumanCorrectionEffortMeasure,</span>
+<span class="sd">        title = {Highly Accurate Dichotomous Image Segmentation},</span>
+<span class="sd">        author = {Xuebin Qin and Hang Dai and Xiaobin Hu and Deng-Ping Fan and Ling Shao and Luc Van Gool},</span>
+<span class="sd">        booktitle = ECCV,</span>
+<span class="sd">        year = {2022}</span>
+<span class="sd">    }</span>
+<span class="sd">    ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="HumanCorrectionEffortMeasure.__init__">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.HumanCorrectionEffortMeasure.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relax</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the Human Correction Effort Measure.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            relax (int, optional): The number of relaxations. Defaults to 5.</span>
+<span class="sd">            epsilon (float, optional): The epsilon value. Defaults to 2.0.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hces</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relax</span> <span class="o">=</span> <span class="n">relax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="n">epsilon</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">morphology_kernel</span> <span class="o">=</span> <span class="n">morphology</span><span class="o">.</span><span class="n">disk</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="HumanCorrectionEffortMeasure.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.HumanCorrectionEffortMeasure.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Statistics the metric for the pair of pred and gt.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="p">)</span>
+
+        <span class="n">hce</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cal_hce</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hce</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="HumanCorrectionEffortMeasure.cal_hce">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.HumanCorrectionEffortMeasure.cal_hce">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cal_hce</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the Human Correction Effort (HCE) for a pair of prediction and ground truth.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: The HCE value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gt_skeleton</span> <span class="o">=</span> <span class="n">morphology</span><span class="o">.</span><span class="n">skeletonize</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">pred</span> <span class="o">=</span> <span class="n">pred</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
+
+        <span class="n">union</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">gt</span><span class="p">,</span> <span class="n">pred</span><span class="p">)</span>
+        <span class="n">TP</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">gt</span><span class="p">,</span> <span class="n">pred</span><span class="p">)</span>
+        <span class="n">FP</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_xor</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">TP</span><span class="p">)</span>
+        <span class="n">FN</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_xor</span><span class="p">(</span><span class="n">gt</span><span class="p">,</span> <span class="n">TP</span><span class="p">)</span>
+
+        <span class="c1"># relax the union of gt and pred</span>
+        <span class="n">eroded_union</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">erode</span><span class="p">(</span><span class="n">union</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">morphology_kernel</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">relax</span><span class="p">)</span>
+
+        <span class="c1"># get the relaxed FP regions for computing the human efforts in correcting them ---</span>
+        <span class="n">FP_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">FP</span><span class="p">,</span> <span class="n">eroded_union</span><span class="p">)</span>  <span class="c1"># get the relaxed FP</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">relax</span><span class="p">):</span>
+            <span class="n">FP_</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">dilate</span><span class="p">(</span><span class="n">FP_</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">morphology_kernel</span><span class="p">)</span>
+            <span class="n">FP_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">FP_</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">),</span> <span class="o">~</span><span class="n">gt</span><span class="p">)</span>
+        <span class="n">FP_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">FP</span><span class="p">,</span> <span class="n">FP_</span><span class="p">)</span>
+
+        <span class="c1"># get the relaxed FN regions for computing the human efforts in correcting them ---</span>
+        <span class="n">FN_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">FN</span><span class="p">,</span> <span class="n">eroded_union</span><span class="p">)</span>  <span class="c1"># preserve the structural components of FN</span>
+        <span class="c1"># recover the FN, where pixels are not close to the TP borders</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">relax</span><span class="p">):</span>
+            <span class="n">FN_</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">dilate</span><span class="p">(</span><span class="n">FN_</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">morphology_kernel</span><span class="p">)</span>
+            <span class="n">FN_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">FN_</span><span class="p">,</span> <span class="o">~</span><span class="n">pred</span><span class="p">)</span>
+        <span class="n">FN_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">FN</span><span class="p">,</span> <span class="n">FN_</span><span class="p">)</span>
+        <span class="c1"># preserve the structural components of FN</span>
+        <span class="n">FN_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">FN_</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_xor</span><span class="p">(</span><span class="n">gt_skeleton</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">TP</span><span class="p">,</span> <span class="n">gt_skeleton</span><span class="p">)))</span>
+
+        <span class="c1"># Find exact polygon control points and independent regions.</span>
+        <span class="c1"># find contours from FP_ and control points and independent regions for human correction</span>
+        <span class="n">contours_FP</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">findContours</span><span class="p">(</span><span class="n">FP_</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">cv2</span><span class="o">.</span><span class="n">RETR_TREE</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CHAIN_APPROX_NONE</span><span class="p">)</span>
+        <span class="n">condition_FP</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">TP</span><span class="p">,</span> <span class="n">FN_</span><span class="p">)</span>
+        <span class="n">bdies_FP</span><span class="p">,</span> <span class="n">indep_cnt_FP</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_conditional_boundary</span><span class="p">(</span><span class="n">contours_FP</span><span class="p">,</span> <span class="n">FP_</span><span class="p">,</span> <span class="n">condition_FP</span><span class="p">)</span>
+        <span class="c1"># find contours from FN_ and control points and independent regions for human correction</span>
+        <span class="n">contours_FN</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">findContours</span><span class="p">(</span><span class="n">FN_</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="n">cv2</span><span class="o">.</span><span class="n">RETR_TREE</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CHAIN_APPROX_NONE</span><span class="p">)</span>
+        <span class="n">condition_FN</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">TP</span><span class="p">,</span> <span class="n">FP_</span><span class="p">),</span> <span class="n">FN_</span><span class="p">)</span>
+        <span class="n">bdies_FN</span><span class="p">,</span> <span class="n">indep_cnt_FN</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_conditional_boundary</span><span class="p">(</span><span class="n">contours_FN</span><span class="p">,</span> <span class="n">FN_</span><span class="p">,</span> <span class="n">condition_FN</span><span class="p">)</span>
+
+        <span class="n">poly_FP_point_cnt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">count_polygon_control_points</span><span class="p">(</span><span class="n">bdies_FP</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">)</span>
+        <span class="n">poly_FN_point_cnt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">count_polygon_control_points</span><span class="p">(</span><span class="n">bdies_FN</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">poly_FP_point_cnt</span> <span class="o">+</span> <span class="n">indep_cnt_FP</span> <span class="o">+</span> <span class="n">poly_FN_point_cnt</span> <span class="o">+</span> <span class="n">indep_cnt_FN</span></div>
+
+
+<div class="viewcode-block" id="HumanCorrectionEffortMeasure.filter_conditional_boundary">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.HumanCorrectionEffortMeasure.filter_conditional_boundary">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_conditional_boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contours</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">condition</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Filter boundary segments based on a given condition mask and compute the number of independent connected regions that require human correction.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            contours (List[np.ndarray]): List of boundary contours (OpenCV format).</span>
+<span class="sd">            mask (np.ndarray): Binary mask representing the region of interest.</span>
+<span class="sd">            condition (np.ndarray): Condition mask used to determine which</span>
+<span class="sd">                boundary points need to be considered.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[List[np.ndarray], int]:</span>
+<span class="sd">                - boundaries (List[np.ndarray]): Filtered boundary segments that require correction.</span>
+<span class="sd">                - independent_count (int): Number of independent connected regions</span>
+<span class="sd">                that need correction (i.e., human editing effort).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">condition</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">dilate</span><span class="p">(</span><span class="n">condition</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">morphology_kernel</span><span class="p">)</span>
+
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">measure</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>  <span class="c1"># find the connected regions</span>
+        <span class="n">independent_flags</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>  <span class="c1"># the label of each connected regions</span>
+        <span class="n">independent_flags</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># 0 indicate the background region</span>
+
+        <span class="n">boundaries</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">visited_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">condition</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">contours</span><span class="p">)):</span>
+            <span class="n">temp_boundaries</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">temp_boundary</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">pt</span> <span class="ow">in</span> <span class="n">contours</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">pt</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">pt</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="n">condition</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">visited_map</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">temp_boundary</span><span class="p">:</span>  <span class="c1"># if the previous point is not a boundary point, append the previous boundary</span>
+                        <span class="n">temp_boundaries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_boundary</span><span class="p">)</span>
+                        <span class="n">temp_boundary</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">continue</span>
+
+                <span class="n">temp_boundary</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">])</span>
+                <span class="n">visited_map</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">visited_map</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="n">independent_flags</span><span class="p">[</span><span class="n">labels</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># mark region as requiring correction</span>
+
+            <span class="k">if</span> <span class="n">temp_boundary</span><span class="p">:</span>
+                <span class="n">temp_boundaries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_boundary</span><span class="p">)</span>
+
+            <span class="c1"># check if the first and the last boundaries are connected.</span>
+            <span class="c1"># if yes, invert the first boundary and attach it after the last boundary</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">temp_boundaries</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">first_x</span><span class="p">,</span> <span class="n">first_y</span> <span class="o">=</span> <span class="n">temp_boundaries</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">last_x</span><span class="p">,</span> <span class="n">last_y</span> <span class="o">=</span> <span class="n">temp_boundaries</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">first_x</span> <span class="o">-</span> <span class="n">last_x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">first_y</span> <span class="o">==</span> <span class="n">last_y</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="p">(</span><span class="n">first_x</span> <span class="o">==</span> <span class="n">last_x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">first_y</span> <span class="o">-</span> <span class="n">last_y</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">first_x</span> <span class="o">-</span> <span class="n">last_x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">first_y</span> <span class="o">-</span> <span class="n">last_y</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="p">):</span>
+                    <span class="n">temp_boundaries</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">temp_boundaries</span><span class="p">[</span><span class="mi">0</span><span class="p">][::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">del</span> <span class="n">temp_boundaries</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">temp_boundaries</span><span class="p">)):</span>
+                <span class="n">temp_boundaries</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">temp_boundaries</span><span class="p">[</span><span class="n">k</span><span class="p">])[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+
+            <span class="k">if</span> <span class="n">temp_boundaries</span><span class="p">:</span>
+                <span class="n">boundaries</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">temp_boundaries</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">boundaries</span><span class="p">,</span> <span class="n">independent_flags</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="HumanCorrectionEffortMeasure.count_polygon_control_points">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.HumanCorrectionEffortMeasure.count_polygon_control_points">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">count_polygon_control_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundaries</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Approximate each boundary using the Ramer-Douglas-Peucker (RDP) algorithm and count the total number of control points of all approximated polygons.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            boundaries (List[np.ndarray]): List of boundary contours.</span>
+<span class="sd">                Each contour is an Nx1x2 numpy array (OpenCV contour format).</span>
+<span class="sd">            epsilon (float): RDP approximation tolerance.</span>
+<span class="sd">                Larger values result in fewer control points.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int: The total number of control points across all approximated polygons.</span>
+
+<span class="sd">        Reference:</span>
+<span class="sd">            https://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">num_points</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">boundary</span> <span class="ow">in</span> <span class="n">boundaries</span><span class="p">:</span>
+            <span class="n">approx_poly</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">approxPolyDP</span><span class="p">(</span><span class="n">boundary</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>  <span class="c1"># approximate boundary</span>
+            <span class="n">num_points</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">approx_poly</span><span class="p">)</span>  <span class="c1"># count vertices (control points)</span>
+        <span class="k">return</span> <span class="n">num_points</span></div>
+
+
+<div class="viewcode-block" id="HumanCorrectionEffortMeasure.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.sod_metrics.HumanCorrectionEffortMeasure.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results about HCE.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict(hce=hce)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">hce</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hces</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">hce</span><span class="o">=</span><span class="n">hce</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, lartpang.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

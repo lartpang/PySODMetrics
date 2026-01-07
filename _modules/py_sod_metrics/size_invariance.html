@@ -1,0 +1,409 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>py_sod_metrics.size_invariance &mdash; PySODMetrics 1.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=72d88caf"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            PySODMetrics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../metrics.html">Supported Metrics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PySODMetrics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">py_sod_metrics.size_invariance</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for py_sod_metrics.size_invariance</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">measure</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.fmeasurev2</span><span class="w"> </span><span class="kn">import</span> <span class="n">FmeasureV2</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.sod_metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">MAE</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE</span><span class="p">,</span> <span class="n">validate_and_normalize_input</span>
+
+
+<div class="viewcode-block" id="parse_connected_components">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.size_invariance.parse_connected_components">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_connected_components</span><span class="p">(</span><span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">area_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the connected components in a binary mask.</span>
+
+<span class="sd">    1. If there are no connected components, return an empty list.</span>
+<span class="sd">    2. If all the connected components are smaller than the area_threshold, we will return the largest one.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mask (np.ndarray): binary mask</span>
+<span class="sd">        area_threshold (float): The threshold for the area of the connected components.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: max_valid_tgt_idx, valid_labeled_mask</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">labeled_tgts</span> <span class="o">=</span> <span class="n">measure</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">background</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">return_num</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">tgt_props</span> <span class="o">=</span> <span class="n">measure</span><span class="o">.</span><span class="n">regionprops</span><span class="p">(</span><span class="n">labeled_tgts</span><span class="p">)</span>
+
+    <span class="c1"># find the valid targets based on the target size</span>
+    <span class="n">tgts_with_max_size</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">max_valid_tgt_idx</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># 0 is background</span>
+    <span class="n">valid_labeled_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">tgt_prop</span> <span class="ow">in</span> <span class="n">tgt_props</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">tgts_with_max_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">tgts_with_max_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">area</span> <span class="o">==</span> <span class="n">tgt_prop</span><span class="o">.</span><span class="n">area</span><span class="p">:</span>
+            <span class="n">tgts_with_max_size</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tgt_prop</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">tgts_with_max_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">area</span> <span class="o">&lt;</span> <span class="n">tgt_prop</span><span class="o">.</span><span class="n">area</span><span class="p">:</span>
+            <span class="n">tgts_with_max_size</span> <span class="o">=</span> <span class="p">[</span><span class="n">tgt_prop</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">tgt_prop</span><span class="o">.</span><span class="n">area</span> <span class="o">&gt;=</span> <span class="n">area_threshold</span><span class="p">:</span>  <span class="c1"># valid indices start from 1</span>
+            <span class="n">max_valid_tgt_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">valid_labeled_mask</span><span class="p">[</span><span class="n">labeled_tgts</span> <span class="o">==</span> <span class="n">tgt_prop</span><span class="o">.</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_valid_tgt_idx</span>
+
+    <span class="k">if</span> <span class="n">max_valid_tgt_idx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># no valid targets</span>
+        <span class="k">for</span> <span class="n">tgt_prop</span> <span class="ow">in</span> <span class="n">tgts_with_max_size</span><span class="p">:</span>
+            <span class="n">max_valid_tgt_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">valid_labeled_mask</span><span class="p">[</span><span class="n">labeled_tgts</span> <span class="o">==</span> <span class="n">tgt_prop</span><span class="o">.</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_valid_tgt_idx</span>
+    <span class="k">return</span> <span class="n">max_valid_tgt_idx</span><span class="p">,</span> <span class="n">valid_labeled_mask</span></div>
+
+
+
+<div class="viewcode-block" id="encode_bboxwise_tgts_bitwise">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.size_invariance.encode_bboxwise_tgts_bitwise">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">encode_bboxwise_tgts_bitwise</span><span class="p">(</span><span class="n">max_valid_tgt_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">valid_labeled_mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode each target bbox region with a bitwise mask.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        max_valid_tgt_idx (int): The maximum index of the valid targets.</span>
+<span class="sd">        valid_labeled_mask (np.ndarray): The mask of the valid targets. 0 is background.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: The size weight for the bbox of each target.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">binarized_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">valid_labeled_mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_valid_tgt_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>  <span class="c1"># 0 is background</span>
+        <span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">valid_labeled_mask</span> <span class="o">==</span> <span class="n">label</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;connected_block_size = 0 when label = </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">valid_labeled_mask</span><span class="p">)</span><span class="si">}</span><span class="s2">!&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">cols</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span>
+        <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+
+        <span class="c1"># This encoding scheme can encode overlaping multiple targets in different bits.</span>
+        <span class="n">weight</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">label</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># 0,1,2,4,8,...</span>
+        <span class="n">binarized_weights</span><span class="p">[</span><span class="n">ymin</span> <span class="p">:</span> <span class="p">(</span><span class="n">ymax</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">xmin</span> <span class="p">:</span> <span class="p">(</span><span class="n">xmax</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">+=</span> <span class="n">weight</span>
+    <span class="k">return</span> <span class="n">binarized_weights</span></div>
+
+
+
+<div class="viewcode-block" id="get_kth_bit">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.size_invariance.get_kth_bit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_kth_bit</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the value (0 or 1) in the k-th bit of each element in the array.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n (np.ndarray): The original data array.</span>
+<span class="sd">        k (int): The index of the bit to extract.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: The extracted data array. Only the output of the kth bit which is not 0 equals 1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+
+    <span class="c1"># Use bitwise AND to check if the k-th bit is set</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">n</span> <span class="o">&amp;</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)))</span> <span class="o">&gt;&gt;</span> <span class="p">(</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="SizeInvarianceFmeasureV2">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.size_invariance.SizeInvarianceFmeasureV2">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SizeInvarianceFmeasureV2</span><span class="p">(</span><span class="n">FmeasureV2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Size invariance version of FmeasureV2.</span>
+
+<span class="sd">    This provides size-invariant versions of standard SOD metrics that address the imbalance problem in multi-object salient object detection. Traditional metrics can be biased toward larger objects, while size-invariant metrics ensure fair evaluation across objects of different sizes.</span>
+
+<span class="sd">    ```</span>
+<span class="sd">    @inproceedings{SizeInvarianceVariants,</span>
+<span class="sd">        title = {Size-invariance Matters: Rethinking Metrics and Losses for Imbalanced Multi-object Salient Object Detection},</span>
+<span class="sd">        author = {Feiran Li and Qianqian Xu and Shilong Bao and Zhiyong Yang and Runmin Cong and Xiaochun Cao and Qingming Huang},</span>
+<span class="sd">        booktitle = ICML,</span>
+<span class="sd">        year = {2024}</span>
+<span class="sd">    }</span>
+<span class="sd">    ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">FG</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>  <span class="c1"># 真实前景, FG=(TPs+FNs)</span>
+        <span class="n">BG</span> <span class="o">=</span> <span class="n">gt</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">FG</span>  <span class="c1"># 真实背景, BG=(TNs+FPs)</span>
+
+        <span class="n">dynamical_tpfptnfn</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">adaptive_tpfptnfn</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">binary_tpfptnfn</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">handler_name</span><span class="p">,</span> <span class="n">handler</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metric_handlers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dynamical_tpfptnfn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">dynamical_tpfptnfn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamically_binarizing</span><span class="p">(</span><span class="n">pred</span><span class="o">=</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">,</span> <span class="n">FG</span><span class="o">=</span><span class="n">FG</span><span class="p">,</span> <span class="n">BG</span><span class="o">=</span><span class="n">BG</span><span class="p">)</span>
+                <span class="n">tgt_result</span> <span class="o">=</span> <span class="n">handler</span><span class="p">(</span><span class="o">**</span><span class="n">dynamical_tpfptnfn</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">sample_based</span><span class="p">:</span>  <span class="c1"># is not None</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                        <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">list</span>
+                    <span class="p">):</span>  <span class="c1"># is not [] or not contain list</span>
+                        <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tgt_result</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tgt_result</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">adaptive_tpfptnfn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">adaptive_tpfptnfn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adaptively_binarizing</span><span class="p">(</span><span class="n">pred</span><span class="o">=</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">,</span> <span class="n">FG</span><span class="o">=</span><span class="n">FG</span><span class="p">,</span> <span class="n">BG</span><span class="o">=</span><span class="n">BG</span><span class="p">)</span>
+                <span class="n">tgt_result</span> <span class="o">=</span> <span class="n">handler</span><span class="p">(</span><span class="o">**</span><span class="n">adaptive_tpfptnfn</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+                <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tgt_result</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">binary_tpfptnfn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># `pred &gt; 0.5`: Simulating the effect of the `argmax` function.</span>
+                    <span class="n">binary_tpfptnfn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_statistics</span><span class="p">(</span><span class="n">binary</span><span class="o">=</span><span class="n">pred</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">,</span> <span class="n">FG</span><span class="o">=</span><span class="n">FG</span><span class="p">,</span> <span class="n">BG</span><span class="o">=</span><span class="n">BG</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">sample_based</span><span class="p">:</span>
+                    <span class="n">tgt_result</span> <span class="o">=</span> <span class="n">handler</span><span class="p">(</span><span class="o">**</span><span class="n">binary_tpfptnfn</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">list</span><span class="p">):</span>
+                        <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tgt_result</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>  <span class="c1"># will average over all targets from all samples</span>
+                    <span class="n">tgt_result</span> <span class="o">=</span> <span class="n">binary_tpfptnfn</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="s2">&quot;tp&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">tgt_result</span><span class="p">[</span><span class="s2">&quot;tp&quot;</span><span class="p">]</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="s2">&quot;fp&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">tgt_result</span><span class="p">[</span><span class="s2">&quot;fp&quot;</span><span class="p">]</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="s2">&quot;tn&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">tgt_result</span><span class="p">[</span><span class="s2">&quot;tn&quot;</span><span class="p">]</span>
+                    <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="p">[</span><span class="s2">&quot;fn&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">tgt_result</span><span class="p">[</span><span class="s2">&quot;fn&quot;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="SizeInvarianceFmeasureV2.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.size_invariance.SizeInvarianceFmeasureV2.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Statistics the metrics for the pair of pred and gt.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metric_handlers</span><span class="p">:</span>  <span class="c1"># 没有添加metric_handler</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Please add your metric handler before using `step()`.&quot;</span><span class="p">)</span>
+
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">)</span>
+
+        <span class="n">max_valid_tgt_idx</span><span class="p">,</span> <span class="n">valid_labeled_mask</span> <span class="o">=</span> <span class="n">parse_connected_components</span><span class="p">(</span><span class="n">mask</span><span class="o">=</span><span class="n">gt</span><span class="p">)</span>
+        <span class="n">tgt_weights</span> <span class="o">=</span> <span class="n">encode_bboxwise_tgts_bitwise</span><span class="p">(</span><span class="n">max_valid_tgt_idx</span><span class="p">,</span> <span class="n">valid_labeled_mask</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">max_valid_tgt_idx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># no target or no background</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_metrics</span><span class="p">(</span><span class="n">pred</span><span class="o">=</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">tgt_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_valid_tgt_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">tgt_mask</span> <span class="o">=</span> <span class="n">get_kth_bit</span><span class="p">(</span><span class="n">tgt_weights</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">tgt_idx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+                <span class="n">_pred</span> <span class="o">=</span> <span class="n">pred</span> <span class="o">*</span> <span class="n">tgt_mask</span>
+                <span class="n">_gt</span> <span class="o">=</span> <span class="n">gt</span> <span class="o">&amp;</span> <span class="n">tgt_mask</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_update_metrics</span><span class="p">(</span><span class="n">pred</span><span class="o">=</span><span class="n">_pred</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="n">_gt</span><span class="p">)</span>
+
+        <span class="c1"># average over all targets in each sample</span>
+        <span class="k">for</span> <span class="n">handler_name</span><span class="p">,</span> <span class="n">handler</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metric_handlers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">handler</span><span class="o">.</span><span class="n">sample_based</span><span class="p">:</span>
+                <span class="n">tgt_results</span> <span class="o">=</span> <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>  <span class="c1"># Tx256</span>
+                <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tgt_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>  <span class="c1"># Tx256</span>
+
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">tgt_results</span> <span class="o">=</span> <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>  <span class="c1"># Tx1</span>
+                <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tgt_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">)))</span>  <span class="c1"># 1</span>
+
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">handler</span><span class="o">.</span><span class="n">sample_based</span><span class="p">:</span>
+                <span class="n">tgt_results</span> <span class="o">=</span> <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>  <span class="c1"># Tx1</span>
+                <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tgt_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">)))</span>  <span class="c1"># 1</span></div>
+
+
+<div class="viewcode-block" id="SizeInvarianceFmeasureV2.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.size_invariance.SizeInvarianceFmeasureV2.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results of the specific metric names.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: All results corresponding to different metrics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">handler_name</span><span class="p">,</span> <span class="n">handler</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metric_handlers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">dynamic_results</span> <span class="o">=</span> <span class="n">handler</span><span class="o">.</span><span class="n">dynamic_results</span>
+                <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">sample_based</span><span class="p">:</span>  <span class="c1"># N个T&#39;x256</span>
+                    <span class="n">res</span><span class="p">[</span><span class="s2">&quot;dynamic&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dynamic_results</span>
+                <span class="k">else</span><span class="p">:</span>  <span class="c1"># N&#39;x256 -&gt; 256</span>
+                    <span class="n">res</span><span class="p">[</span><span class="s2">&quot;dynamic&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dynamic_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">res</span><span class="p">[</span><span class="s2">&quot;adaptive&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">handler</span><span class="o">.</span><span class="n">adaptive_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>  <span class="c1"># 1</span>
+
+            <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">binary_results</span> <span class="o">=</span> <span class="n">handler</span><span class="o">.</span><span class="n">binary_results</span>
+                <span class="k">if</span> <span class="n">handler</span><span class="o">.</span><span class="n">sample_based</span><span class="p">:</span>
+                    <span class="n">res</span><span class="p">[</span><span class="s2">&quot;binary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">binary_results</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">TYPE</span><span class="p">))</span>  <span class="c1"># 1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># NOTE: use `np.mean` to simplify output format (`array(123)` -&gt; `123`)</span>
+                    <span class="n">res</span><span class="p">[</span><span class="s2">&quot;binary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">handler</span><span class="p">(</span><span class="o">**</span><span class="n">binary_results</span><span class="p">))</span>
+            <span class="n">results</span><span class="p">[</span><span class="n">handler_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="SizeInvarianceMAE">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.size_invariance.SizeInvarianceMAE">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SizeInvarianceMAE</span><span class="p">(</span><span class="n">MAE</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Size invariance version of MAE.</span>
+
+<span class="sd">    ```</span>
+<span class="sd">    @inproceedings{SizeInvarianceVariants,</span>
+<span class="sd">        title = {Size-invariance Matters: Rethinking Metrics and Losses for Imbalanced Multi-object Salient Object Detection},</span>
+<span class="sd">        author = {Feiran Li and Qianqian Xu and Shilong Bao and Zhiyong Yang and Runmin Cong and Xiaochun Cao and Qingming Huang},</span>
+<span class="sd">        booktitle = ICML,</span>
+<span class="sd">        year = {2024}</span>
+<span class="sd">    }</span>
+<span class="sd">    ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SizeInvarianceMAE.step">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.size_invariance.SizeInvarianceMAE.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Statistics the metric for the pair of pred and gt.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred (np.ndarray): Prediction, gray scale image.</span>
+<span class="sd">            gt (np.ndarray): Ground truth, gray scale image.</span>
+<span class="sd">            normalize (bool, optional): Whether to normalize the input data. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred</span><span class="p">,</span> <span class="n">gt</span> <span class="o">=</span> <span class="n">validate_and_normalize_input</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">gt</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">)</span>
+        <span class="n">max_valid_tgt_idx</span><span class="p">,</span> <span class="n">valid_labeled_mask</span> <span class="o">=</span> <span class="n">parse_connected_components</span><span class="p">(</span><span class="n">mask</span><span class="o">=</span><span class="n">gt</span><span class="p">)</span>
+        <span class="n">tgt_weights</span> <span class="o">=</span> <span class="n">encode_bboxwise_tgts_bitwise</span><span class="p">(</span><span class="n">max_valid_tgt_idx</span><span class="p">,</span> <span class="n">valid_labeled_mask</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">max_valid_tgt_idx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># no targets or no background</span>
+            <span class="n">mae</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">pred</span> <span class="o">-</span> <span class="n">gt</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># there are multiple targets</span>
+            <span class="c1"># background component</span>
+            <span class="n">bg_mask</span> <span class="o">=</span> <span class="n">tgt_weights</span> <span class="o">==</span> <span class="mi">0</span>
+            <span class="n">bg_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">bg_mask</span><span class="p">)</span>
+
+            <span class="n">_pred</span> <span class="o">=</span> <span class="n">pred</span> <span class="o">*</span> <span class="n">bg_mask</span>
+            <span class="n">_gt</span> <span class="o">=</span> <span class="n">gt</span> <span class="o">&amp;</span> <span class="n">bg_mask</span>
+            <span class="n">bg_fg_area_ratio</span> <span class="o">=</span> <span class="n">bg_area</span> <span class="o">/</span> <span class="p">(</span><span class="n">gt</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="n">bg_area</span><span class="p">)</span>
+            <span class="n">factor</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">max_valid_tgt_idx</span> <span class="o">+</span> <span class="n">bg_fg_area_ratio</span><span class="p">)</span>
+            <span class="n">mae</span> <span class="o">=</span> <span class="n">bg_fg_area_ratio</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">_pred</span> <span class="o">-</span> <span class="n">_gt</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">bg_area</span> <span class="o">*</span> <span class="n">factor</span>
+
+            <span class="c1"># foreground components</span>
+            <span class="k">for</span> <span class="n">tgt_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_valid_tgt_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">tgt_mask</span> <span class="o">=</span> <span class="n">get_kth_bit</span><span class="p">(</span><span class="n">tgt_weights</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">tgt_idx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                <span class="n">tgt_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">tgt_mask</span><span class="p">)</span>
+
+                <span class="n">_pred</span> <span class="o">=</span> <span class="n">pred</span> <span class="o">*</span> <span class="n">tgt_mask</span>
+                <span class="n">_gt</span> <span class="o">=</span> <span class="n">gt</span> <span class="o">&amp;</span> <span class="n">tgt_mask</span>
+                <span class="n">mae</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">_pred</span> <span class="o">-</span> <span class="n">_gt</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">tgt_area</span> <span class="o">*</span> <span class="n">factor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mae</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SizeInvarianceMAE.get_results">
+<a class="viewcode-back" href="../../api.html#py_sod_metrics.size_invariance.SizeInvarianceMAE.get_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the results about MAE.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict(mae=mae)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mae</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">maes</span><span class="p">,</span> <span class="n">TYPE</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">si_mae</span><span class="o">=</span><span class="n">mae</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, lartpang.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

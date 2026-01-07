@@ -1,0 +1,226 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PySODMetrics Documentation &mdash; PySODMetrics 1.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=72d88caf"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            PySODMetrics
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">Supported Metrics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">PySODMetrics</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">PySODMetrics Documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pysodmetrics-documentation">
+<h1>PySODMetrics Documentation<a class="headerlink" href="#pysodmetrics-documentation" title="Link to this heading"></a></h1>
+<p>Welcome to PySODMetrics - A simple and efficient implementation of SOD metrics.</p>
+<a class="reference external image-reference" href="https://pypi.org/project/pysodmetrics/"><img alt="PyPI version" src="https://img.shields.io/pypi/v/pysodmetrics" />
+</a>
+<a class="reference external image-reference" href="https://pypi.org/project/pysodmetrics/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/pysodmetrics?label=pypi%20downloads&amp;logo=PyPI&amp;logoColor=white" />
+</a>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>PySODMetrics is a Python library that provides simple and efficient implementations of
+metrics for evaluating salient object detection (SOD), camouflaged object detection (COD),
+and medical image segmentation tasks.</p>
+<p><strong>Key Features:</strong></p>
+<ul class="simple">
+<li><p>Based on numpy and scipy for fast computation</p></li>
+<li><p>Verified against the original MATLAB implementations</p></li>
+<li><p>Simple and extensible code structure</p></li>
+<li><p>Lightweight and easy to use</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Our exploration in this field continues with <a class="reference external" href="https://github.com/lartpang/PyIRSTDMetrics">PyIRSTDMetrics</a>,
+a project born from the same core motivation. Think of them as twin initiatives:
+this project maps the landscape of current evaluation, while its sibling takes the next step
+to expand upon and rethink it.</p>
+</div>
+</section>
+<section id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#install-from-pypi">Install from PyPI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#install-from-source">Install from Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#building-documentation">Building Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#verifying-installation">Verifying Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#quick-start">Quick Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#using-fmeasurev2-framework-recommended">Using FmeasureV2 Framework (Recommended)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#creating-a-custom-metric-recorder">Creating a Custom Metric Recorder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#specialized-use-cases">Specialized Use Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#complete-evaluation-example">Complete Evaluation Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#reference">Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">Supported Metrics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#basic-metrics">Basic Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#advanced-metrics">Advanced Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#size-invariant-metrics">Size-Invariant Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#metric-comparison-table">Metric Comparison Table</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metrics.html#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-py_sod_metrics.sod_metrics">Core Metrics Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-py_sod_metrics.fmeasurev2">FmeasureV2 Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-py_sod_metrics.context_measure">Context Measure Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-py_sod_metrics.multiscale_iou">Multi-Scale IoU Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-py_sod_metrics.size_invariance">Size Invariance Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-py_sod_metrics.utils">Utility Functions</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="supported-metrics">
+<h2>Supported Metrics<a class="headerlink" href="#supported-metrics" title="Link to this heading"></a></h2>
+<p>PySODMetrics supports a comprehensive set of evaluation metrics:</p>
+<ul class="simple">
+<li><p><strong>MAE</strong> - Mean Absolute Error</p></li>
+<li><p><strong>S-measure</strong> (<span class="math notranslate nohighlight">\(S_m\)</span>) - Structure Measure</p></li>
+<li><p><strong>E-measure</strong> (<span class="math notranslate nohighlight">\(E_m\)</span>) - Enhanced-alignment Measure</p></li>
+<li><p><strong>F-measure</strong> (<span class="math notranslate nohighlight">\(F_\beta\)</span>) - Precision-Recall F-measure</p></li>
+<li><p><strong>Weighted F-measure</strong> (<span class="math notranslate nohighlight">\(F^\omega_\beta\)</span>)</p></li>
+<li><p><strong>Context-Measure</strong> (<span class="math notranslate nohighlight">\(C_\beta\)</span>, <span class="math notranslate nohighlight">\(C^\omega_\beta\)</span>)</p></li>
+<li><p><strong>Multi-Scale IoU</strong> - Multi-scale Intersection over Union</p></li>
+<li><p><strong>Human Correction Effort Measure</strong></p></li>
+<li><p>And many more classification metrics (BER, Dice, Kappa, Precision, Recall, etc.)</p></li>
+</ul>
+<p>See <a class="reference internal" href="metrics.html"><span class="doc">Supported Metrics</span></a> for detailed descriptions of all supported metrics.</p>
+</section>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+<section id="related-projects">
+<h1>Related Projects<a class="headerlink" href="#related-projects" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/lartpang/PySODEvalToolkit">PySODEvalToolkit</a> - A Python-based Evaluation Toolbox for Salient Object Detection and Camouflaged Object Detection</p></li>
+</ul>
+</section>
+<section id="links">
+<h1>Links<a class="headerlink" href="#links" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><strong>GitHub Repository:</strong> <a class="reference external" href="https://github.com/lartpang/PySODMetrics">https://github.com/lartpang/PySODMetrics</a></p></li>
+<li><p><strong>PyPI Package:</strong> <a class="reference external" href="https://pypi.org/project/pysodmetrics/">https://pypi.org/project/pysodmetrics/</a></p></li>
+<li><p><strong>Issue Tracker:</strong> <a class="reference external" href="https://github.com/lartpang/PySODMetrics/issues">https://github.com/lartpang/PySODMetrics/issues</a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, lartpang.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
