@@ -114,6 +114,12 @@ class ContextMeasure:
             return np.diag([0.25, 0.25]), 1, 1
 
         cov_matrix = np.cov(points, rowvar=False)
+        # replace small values with EPS to avoid singular matrix and ensure the inverse exists
+        # at the same time, keep the total_sigma not zero
+        if cov_matrix[0, 0] == 0:
+            cov_matrix[0, 0] = EPS
+        if cov_matrix[1, 1] == 0:
+            cov_matrix[1, 1] = EPS
         sigma_x = np.sqrt(cov_matrix[0, 0])
         sigma_y = np.sqrt(cov_matrix[1, 1])
         total_sigma = np.sqrt(cov_matrix[0, 0] + cov_matrix[1, 1])
@@ -164,13 +170,13 @@ class CamouflageContextMeasure(ContextMeasure):
         self.gamma = gamma
         self.lambda_spatial = lambda_spatial
 
-    def step(self, pred: np.ndarray, gt: np.ndarray, img: np.ndarray, normalize: bool = True):
+    def step(self, pred: np.ndarray, gt: np.ndarray, *, img: np.ndarray, normalize: bool = True):  # type: ignore[override]
         """Statistics the metric for the pair of pred, gt, and img.
 
         Args:
             pred (np.ndarray): Prediction, gray scale image.
             gt (np.ndarray): Ground truth, gray scale image.
-            img (np.ndarray): Original RGB image (required for camouflage degree calculation).
+            img (np.ndarray): Original RGB image (required for camouflage degree calculation). It is set as keyword-only argument to avoid positional mismatch.
             normalize (bool, optional): Whether to normalize the input data. Defaults to True.
         """
         pred, gt = validate_and_normalize_input(pred, gt, normalize)

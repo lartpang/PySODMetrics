@@ -1,4 +1,5 @@
 import abc
+from typing import Dict, Optional
 
 import numpy as np
 
@@ -40,7 +41,7 @@ class _BaseHandler:
             self.binary_results = None
 
     @abc.abstractmethod
-    def __call__(self, tp, fp, tn, fn):
+    def __call__(self, tp, fp, tn, fn) -> np.ndarray:
         """Calculate the metric value.
 
         Args:
@@ -247,7 +248,7 @@ class FmeasureHandler(_BaseHandler):
             with_binary (bool, optional): Record binary results for binary version.
             sample_based (bool, optional): Whether to average the metric of each sample or calculate
                 the metric of the dataset. Defaults to True.
-            beta (bool, optional): β^2 in F-measure. Defaults to 0.3.
+            beta (float, optional): β^2 in F-measure. Defaults to 0.3.
         """
         super().__init__(
             with_dynamic=with_dynamic,
@@ -277,7 +278,7 @@ class FmeasureV2:
     This class provides a flexible framework for computing various binary classification metrics including precision, recall, specificity, dice, IoU, and F-measure. It supports dynamic thresholding, adaptive thresholding, and binary evaluation modes.
     """
 
-    def __init__(self, metric_handlers: dict = None):
+    def __init__(self, metric_handlers: Optional[Dict] = None):
         """Enhanced Fmeasure class with more relevant metrics, e.g. precision, recall, specificity, dice, iou, fmeasure and so on.
 
         Args:
@@ -342,8 +343,8 @@ class FmeasureV2:
             dict: TPs, FPs, TNs, FNs
         """
         # 1. 获取预测结果在真值前背景区域中的直方图
-        pred: np.ndarray = (pred * 255).astype(np.uint8)
-        bins: np.ndarray = np.linspace(0, 256, 257)
+        pred = (pred * 255).astype(np.uint8)
+        bins = np.linspace(0, 256, 257)
         tp_hist, _ = np.histogram(pred[gt], bins=bins)  # 最后一个bin为[255, 256]
         fp_hist, _ = np.histogram(pred[~gt], bins=bins)
 

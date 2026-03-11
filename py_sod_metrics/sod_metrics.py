@@ -161,11 +161,11 @@ class MAE:
         mae = self.cal_mae(pred, gt)
         self.maes.append(mae)
 
-    def cal_mae(self, pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
+    def cal_mae(self, pred: np.ndarray, gt: np.ndarray) -> np.floating:
         """Calculate the mean absolute error.
 
         Returns:
-            np.ndarray: mae
+            np.floating: mae
         """
         mae = np.mean(np.abs(pred - gt))
         return mae
@@ -216,7 +216,7 @@ class Smeasure:
         sm = self.cal_sm(pred, gt)
         self.sms.append(sm)
 
-    def cal_sm(self, pred: np.ndarray, gt: np.ndarray) -> float:
+    def cal_sm(self, pred: np.ndarray, gt: np.ndarray) -> np.floating:
         """Calculate the S-measure (Structure-measure) score.
 
         Computes a weighted combination of object-aware and region-aware structural similarity scores. For edge cases (all foreground or all background), returns simplified metrics.
@@ -226,7 +226,7 @@ class Smeasure:
             gt (np.ndarray): Binary ground truth mask.
 
         Returns:
-            float: S-measure score in range [0, 1], where higher is better.
+            np.floating: S-measure score in range [0, 1], where higher is better.
         """
         y = np.mean(gt)
         if y == 0:
@@ -236,7 +236,7 @@ class Smeasure:
         else:
             object_score = self.object(pred, gt) * self.alpha
             region_score = self.region(pred, gt) * (1 - self.alpha)
-            sm = max(0, object_score + region_score)
+            sm = np.maximum(0, object_score + region_score)
         return sm
 
     def s_object(self, x: np.ndarray) -> float:
@@ -251,11 +251,14 @@ class Smeasure:
             float: Object-aware similarity score.
         """
         mean = np.mean(x)
-        std = np.std(x, ddof=1)
+        if x.size > 1:
+            std = np.std(x, ddof=1)
+        else:  # if there is only one pixel, np.std will raise a warning, so std = 0
+            std = 0
         score = 2 * mean / (np.power(mean, 2) + 1 + std + EPS)
         return score
 
-    def object(self, pred: np.ndarray, gt: np.ndarray) -> float:
+    def object(self, pred: np.ndarray, gt: np.ndarray) -> np.floating:
         """Calculate the object-level structural similarity score.
 
         Evaluates structural similarity separately for foreground and background regions, then combines them using the ratio of foreground pixels.
@@ -265,7 +268,7 @@ class Smeasure:
             gt (np.ndarray): Binary ground truth mask.
 
         Returns:
-            float: Object-level similarity score.
+            np.floating: Object-level similarity score.
         """
         gt_mean = np.mean(gt)
         fg_score = self.s_object(pred[gt]) * gt_mean
@@ -328,9 +331,10 @@ class Smeasure:
         x = np.mean(pred)
         y = np.mean(gt)
 
-        sigma_x = np.sum((pred - x) ** 2) / (N - 1)
-        sigma_y = np.sum((gt - y) ** 2) / (N - 1)
-        sigma_xy = np.sum((pred - x) * (gt - y)) / (N - 1)
+        # align with the definition in the orignal implementation and avoid division by zero when N = 1
+        sigma_x = np.sum((pred - x) ** 2) / (N - 1 + EPS)
+        sigma_y = np.sum((gt - y) ** 2) / (N - 1 + EPS)
+        sigma_xy = np.sum((pred - x) * (gt - y)) / (N - 1 + EPS)
 
         alpha = 4 * x * y * sigma_xy
         beta = (x**2 + y**2) * (sigma_x + sigma_y)

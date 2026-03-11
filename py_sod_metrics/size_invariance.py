@@ -27,16 +27,21 @@ def parse_connected_components(mask: np.ndarray, area_threshold: float = 50) -> 
     max_valid_tgt_idx = 0  # 0 is background
     valid_labeled_mask = np.zeros_like(mask, dtype=int)
     for tgt_prop in tgt_props:
-        if tgts_with_max_size is not None or tgts_with_max_size[0].area == tgt_prop.area:
+        if not tgts_with_max_size or tgts_with_max_size[0].area == tgt_prop.area:
+            # if no targets or area matches, append the current target
             tgts_with_max_size.append(tgt_prop)
         elif tgts_with_max_size[0].area < tgt_prop.area:
+            # if current target has larger area, replace the list
             tgts_with_max_size = [tgt_prop]
 
         if tgt_prop.area >= area_threshold:  # valid indices start from 1
             max_valid_tgt_idx += 1
             valid_labeled_mask[labeled_tgts == tgt_prop.label] = max_valid_tgt_idx
 
-    if max_valid_tgt_idx == 0:  # no valid targets
+    if max_valid_tgt_idx == 0:  # no targets with area >= area_threshold
+        # here is different from the original implementation (https://github.com/Ferry-Li/SI_Metric/blob/6b87f78512f7c9c2600e2c2f563cc3763581e24f/generate_weight.py#L43-L52)
+        # the original implementation directly uses the first target in tgt_props and assigns the value 1 to the target's pixels
+        # while this implementation assigns a unique index to each target in tgts_with_max_size (targets with the same and largest area)
         for tgt_prop in tgts_with_max_size:
             max_valid_tgt_idx += 1
             valid_labeled_mask[labeled_tgts == tgt_prop.label] = max_valid_tgt_idx
