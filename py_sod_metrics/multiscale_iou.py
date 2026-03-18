@@ -49,7 +49,7 @@ class MSIoU:
         return (sob > 0).astype(sob.dtype)
 
     def shrink_by_grid(self, image: np.ndarray, cell_size: int) -> np.ndarray:
-        """Shrink the image by summing values within grid cells.
+        """Shrink the image by checking for any non-zero values within grid cells.
 
         Performs box-counting after applying zero padding if the image dimensions
         are not perfectly divisible by the cell size.
@@ -72,29 +72,36 @@ class MSIoU:
                 # Padding is added to the top and left edges.
                 image = np.pad(image, ((pad_h, 0), (pad_w, 0)), mode="constant", constant_values=0)
 
-            # Reshape and sum within each cell
+            # Reshape and check for any non-zero value within each cell
             h, w = image.shape[:2]
             image = image.reshape(h // cell_size, cell_size, w // cell_size, cell_size)
-            image = image.sum(axis=(1, 3))
+            # Use any() for efficiency, but maintain the exact original data type to avoid precision drift in subsequent sums
+            return image.any(axis=(1, 3)).astype(image.dtype)
+
         # image[image > 0] = 1
         return (image > 0).astype(image.dtype)
 
-    def multi_scale_iou(self, pred_edge: np.ndarray, gt_edge: np.ndarray) -> list:
+    def multi_scale_iou(self, pred_edge: np.ndarray, gt_edge: np.ndarray, gt_shrunk_cache: list = None) -> list:
         """Calculate Multi-Scale IoU.
 
         Args:
             pred_edge (np.ndarray): edge map of pred
             gt_edge (np.ndarray): edge map of gt
+            gt_shrunk_cache (list, optional): precomputed GT shrunk results.
 
         Returns:
             list: ratios
         """
         # Calculate IoU ratios at different scales
         ratios = []
-        for cell_size in self.cell_sizes:
+        for i, cell_size in enumerate(self.cell_sizes):
             # Shrink both prediction and ground truth edges
             shrunk_pred_edge = self.shrink_by_grid(pred_edge, cell_size=cell_size)
-            shrunk_gt_edge = self.shrink_by_grid(gt_edge, cell_size=cell_size)
+
+            if gt_shrunk_cache is not None:
+                shrunk_gt_edge = gt_shrunk_cache[i]
+            else:
+                shrunk_gt_edge = self.shrink_by_grid(gt_edge, cell_size=cell_size)
 
             # Calculate IoU with smoothing to prevent division by zero
             numerator = np.logical_and(shrunk_pred_edge, shrunk_gt_edge).sum() + 1
@@ -103,18 +110,19 @@ class MSIoU:
             ratios.append(numerator / denominator)
         return ratios
 
-    def binarizing(self, pred_bin: np.ndarray, gt_edge: np.ndarray) -> list:
+    def binarizing(self, pred_bin: np.ndarray, gt_edge: np.ndarray, gt_shrunk_cache: list = None) -> list:
         """Calculate Multi-Scale IoU based on dynamically thresholding.
 
         Args:
             pred_bin (np.ndarray): binarized pred
             gt_edge (np.ndarray): gt binarized by 128
+            gt_shrunk_cache (list, optional): precomputed GT shrunk results.
 
         Returns:
             np.ndarray: areas under the curve
         """
         pred_edge = self.get_edge(pred_bin)
-        ratios = self.multi_scale_iou(pred_edge, gt_edge)  # 10
+        ratios = self.multi_scale_iou(pred_edge, gt_edge, gt_shrunk_cache=gt_shrunk_cache)  # 10
 
         # Calculate area under the curve using trapezoidal rule
         return np.trapz(y=ratios, dx=1 / (len(self.cell_sizes) - 1))
@@ -140,10 +148,12 @@ class MSIoU:
         gt_edge = self.get_edge(gt)
 
         if self.dynamic_results is not None:
+            gt_shrunk_cache = [self.shrink_by_grid(gt_edge, cell_size=cell_size) for cell_size in self.cell_sizes]
+
             results = []
             _pred = (pred * 255).astype(np.uint8)
             for threshold in np.linspace(0, 256, 257):
-                results.append(self.binarizing(_pred >= threshold, gt_edge))
+                results.append(self.binarizing(_pred >= threshold, gt_edge, gt_shrunk_cache=gt_shrunk_cache))
             # threshold_masks = pred[..., None] >= np.arange(0, 257)[None, None, :]
             self.dynamic_results.append(results)
 
