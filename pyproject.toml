@@ -7,7 +7,7 @@ packages = ["py_sod_metrics"] # 直接指定包名
 
 [project]
 name = "pysodmetrics"
-version = "1.6.1"
+version = "1.6.2"
 dependencies = [
   "numpy>=1.18,<2.3.5",
   "scipy>=1.5,<2.0",
