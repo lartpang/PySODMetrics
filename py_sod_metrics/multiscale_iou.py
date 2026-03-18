@@ -152,9 +152,12 @@ class MSIoU:
 
             results = []
             _pred = (pred * 255).astype(np.uint8)
+            unique_pred_val = np.unique(_pred) + 1  # only consider thresholds that change the binary mask
             for threshold in np.linspace(0, 256, 257):
-                results.append(self.binarizing(_pred >= threshold, gt_edge, gt_shrunk_cache=gt_shrunk_cache))
-            # threshold_masks = pred[..., None] >= np.arange(0, 257)[None, None, :]
+                if threshold in [0, 256] or threshold in unique_pred_val:
+                    results.append(self.binarizing(_pred >= threshold, gt_edge, gt_shrunk_cache))
+                else:
+                    results.append(results[-1])
             self.dynamic_results.append(results)
 
         if self.adaptive_results is not None:
