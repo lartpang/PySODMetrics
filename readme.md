@@ -3,10 +3,9 @@
   </br>
   <h2>PySODMetrics: A simple and efficient implementation of SOD metrics</h2>
   <a href="./readme_zh.md"><img src="https://img.shields.io/badge/README-%E4%B8%AD%E6%96%87-blue"></a>
+  <a href="https://arxiv.org/abs/2607.00886"><img src="https://img.shields.io/badge/arXiv-2607.00886-b31b1b.svg"></a>
   <img src="https://img.shields.io/pypi/v/pysodmetrics">
   <img src="https://img.shields.io/pypi/dm/pysodmetrics?label=pypi%20downloads&logo=PyPI&logoColor=white">
-  <img src="https://img.shields.io/github/last-commit/lartpang/PySODMetrics">
-  <img src="https://img.shields.io/github/last-commit/lartpang/PySODMetrics">
   <img src="https://img.shields.io/github/release-date/lartpang/PySODMetrics">
 </div>
 
@@ -43,7 +42,7 @@ If you use this library in your research, please consider citing the following p
 }
 ```
 
-### Related Projects
+## Related Projects
 
 - [PySODEvalToolkit](https://github.com/lartpang/PySODEvalToolkit): A Python-based Evaluation Toolbox for Salient Object Detection and Camouflaged Object Detection
 
