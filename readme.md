@@ -27,6 +27,22 @@ A simple and efficient implementation of SOD metrics.
 
 Your improvements and suggestions are welcome.
 
+## Citation
+
+If you use this library in your research, please consider citing the following paper:
+
+```bibtex
+@misc{PySODMetrics,
+      title={Beyond Pixel Overlap: A Framework for Decomposing Segmentation Evaluation Metrics}, 
+      author={Youwei Pang and Xiaoqi Zhao},
+      year={2026},
+      eprint={2607.00886},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2607.00886}, 
+}
+```
+
 ### Related Projects
 
 - [PySODEvalToolkit](https://github.com/lartpang/PySODEvalToolkit): A Python-based Evaluation Toolbox for Salient Object Detection and Camouflaged Object Detection
@@ -90,15 +106,6 @@ The core files are in the folder `py_sod_metrics`.
     pages={1597--1604},
     year={2009}
 }
-
-@inproceedings{MAE,
-    title={Saliency filters: Contrast based filtering for salient region detection},
-    author={Perazzi, Federico and Kr{\"a}henb{\"u}hl, Philipp and Pritch, Yael and Hornung, Alexander},
-    booktitle=CVPR,
-    pages={733--740},
-    year={2012}
-}
-
 @inproceedings{Smeasure,
     title={Structure-measure: A new way to evaluate foreground maps},
     author={Fan, Deng-Ping and Cheng, Ming-Ming and Liu, Yun and Li, Tao and Borji, Ali},
@@ -106,7 +113,6 @@ The core files are in the folder `py_sod_metrics`.
     pages={4548--4557},
     year={2017}
 }
-
 @inproceedings{Emeasure,
     title="Enhanced-alignment Measure for Binary Foreground Map Evaluation",
     author="Deng-Ping {Fan} and Cheng {Gong} and Yang {Cao} and Bo {Ren} and Ming-Ming {Cheng} and Ali {Borji}",
@@ -114,7 +120,6 @@ The core files are in the folder `py_sod_metrics`.
     pages="698--704",
     year={2018}
 }
-
 @inproceedings{wFmeasure,
     title={How to evaluate foreground maps?},
     author={Margolin, Ran and Zelnik-Manor, Lihi and Tal, Ayellet},
@@ -122,28 +127,24 @@ The core files are in the folder `py_sod_metrics`.
     pages={248--255},
     year={2014}
 }
-
 @inproceedings{MSIoU,
     title = {Multiscale IOU: A Metric for Evaluation of Salient Object Detection with Fine Structures},
     author = {Ahmadzadeh, Azim and Kempton, Dustin J. and Chen, Yang and Angryk, Rafal A.},
     booktitle = ICIP,
     year = {2021},
 }
-
 @inproceedings{SizeInvarianceVariants,
     title = {Size-invariance Matters: Rethinking Metrics and Losses for Imbalanced Multi-object Salient Object Detection},
     author = {Feiran Li and Qianqian Xu and Shilong Bao and Zhiyong Yang and Runmin Cong and Xiaochun Cao and Qingming Huang},
     booktitle = ICML,
     year = {2024}
 }
-
 @inproceedings{HumanCorrectionEffortMeasure,
     title = {Highly Accurate Dichotomous Image Segmentation},
     author = {Xuebin Qin and Hang Dai and Xiaobin Hu and Deng-Ping Fan and Ling Shao and Luc Van Gool},
     booktitle = ECCV,
     year = {2022}
 }
-
 @article{ContextMeasure,
     title={Context-measure: Contextualizing Metric for Camouflage},
     author={Wang, Chen-Yang and Ji, Gepeng and Shao, Song and Cheng, Ming-Ming and Fan, Deng-Ping},
