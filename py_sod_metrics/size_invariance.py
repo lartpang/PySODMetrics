@@ -48,47 +48,26 @@ def parse_connected_components(mask: np.ndarray, area_threshold: float = 50) -> 
     return max_valid_tgt_idx, valid_labeled_mask
 
 
-def encode_bboxwise_tgts_bitwise(max_valid_tgt_idx: int, valid_labeled_mask: np.ndarray) -> np.ndarray:
-    """Encode each target bbox region with a bitwise mask.
+def get_bboxwise_tgt_masks(max_valid_tgt_idx: int, valid_labeled_mask: np.ndarray) -> list:
+    """Generate a binary mask covering the bounding box of each valid target.
 
     Args:
         max_valid_tgt_idx (int): The maximum index of the valid targets.
         valid_labeled_mask (np.ndarray): The mask of the valid targets. 0 is background.
 
     Returns:
-        np.ndarray: The size weight for the bbox of each target.
+        list: `max_valid_tgt_idx` boolean masks, the i-th one covering the bbox of the target with label i+1.
     """
-    binarized_weights = np.zeros_like(valid_labeled_mask, dtype=float)
-    for label in range(max_valid_tgt_idx + 1):  # 0 is background
-        rows, cols = np.where(valid_labeled_mask == label)
-        assert len(rows) * len(cols) > 0, (
-            f"connected_block_size = 0 when label = {label} for {np.unique(valid_labeled_mask)}!"
-        )
+    tgt_masks = []
+    for label in range(1, max_valid_tgt_idx + 1):  # 0 is background
+        rows, cols = np.nonzero(valid_labeled_mask == label)
+        if rows.size == 0:
+            raise ValueError(f"Target with label {label} is empty in {np.unique(valid_labeled_mask)}!")
 
-        xmin, xmax = min(cols), max(cols)
-        ymin, ymax = min(rows), max(rows)
-
-        # This encoding scheme can encode overlaping multiple targets in different bits.
-        weight = 0 if label == 0 else 1 << (label - 1)  # 0,1,2,4,8,...
-        binarized_weights[ymin : (ymax + 1), xmin : (xmax + 1)] += weight
-    return binarized_weights
-
-
-def get_kth_bit(n: np.ndarray, k: int) -> np.ndarray:
-    """Get the value (0 or 1) in the k-th bit of each element in the array.
-
-    Args:
-        n (np.ndarray): The original data array.
-        k (int): The index of the bit to extract.
-
-    Returns:
-        np.ndarray: The extracted data array. Only the output of the kth bit which is not 0 equals 1.
-    """
-    n = n.astype(int)
-    k = int(k)
-
-    # Use bitwise AND to check if the k-th bit is set
-    return (n & (1 << (k - 1))) >> (k - 1)
+        tgt_mask = np.zeros(valid_labeled_mask.shape, dtype=bool)
+        tgt_mask[rows.min() : rows.max() + 1, cols.min() : cols.max() + 1] = True
+        tgt_masks.append(tgt_mask)
+    return tgt_masks
 
 
 class SizeInvarianceFmeasureV2(FmeasureV2):
@@ -166,14 +145,11 @@ class SizeInvarianceFmeasureV2(FmeasureV2):
         pred, gt = validate_and_normalize_input(pred, gt, normalize=normalize)
 
         max_valid_tgt_idx, valid_labeled_mask = parse_connected_components(mask=gt)
-        tgt_weights = encode_bboxwise_tgts_bitwise(max_valid_tgt_idx, valid_labeled_mask)
 
         if max_valid_tgt_idx == 0:  # no target or no background
             self._update_metrics(pred=pred, gt=gt)
         else:
-            for tgt_idx in range(1, max_valid_tgt_idx + 1):
-                tgt_mask = get_kth_bit(tgt_weights, k=tgt_idx) > 0
-
+            for tgt_mask in get_bboxwise_tgt_masks(max_valid_tgt_idx, valid_labeled_mask):
                 _pred = pred * tgt_mask
                 _gt = gt & tgt_mask
                 self._update_metrics(pred=_pred, gt=_gt)
@@ -245,24 +221,27 @@ class SizeInvarianceMAE(MAE):
         """
         pred, gt = validate_and_normalize_input(pred, gt, normalize=normalize)
         max_valid_tgt_idx, valid_labeled_mask = parse_connected_components(mask=gt)
-        tgt_weights = encode_bboxwise_tgts_bitwise(max_valid_tgt_idx, valid_labeled_mask)
 
         if max_valid_tgt_idx == 0:  # no targets or no background
             mae = np.abs(pred - gt).mean()
         else:  # there are multiple targets
-            # background component
-            bg_mask = tgt_weights == 0
-            bg_area = np.count_nonzero(bg_mask)
+            tgt_masks = get_bboxwise_tgt_masks(max_valid_tgt_idx, valid_labeled_mask)
 
-            _pred = pred * bg_mask
-            _gt = gt & bg_mask
-            bg_fg_area_ratio = bg_area / (gt.size - bg_area)
-            factor = 1 / (max_valid_tgt_idx + bg_fg_area_ratio)
-            mae = bg_fg_area_ratio * np.abs(_pred - _gt).sum() / bg_area * factor
+            # background component
+            bg_mask = ~np.logical_or.reduce(tgt_masks)  # outside all target bboxes
+            bg_area = np.count_nonzero(bg_mask)
+            if bg_area == 0:  # the target bboxes cover the whole image, so the background term vanishes
+                factor = 1 / max_valid_tgt_idx
+                mae = 0
+            else:
+                _pred = pred * bg_mask
+                _gt = gt & bg_mask
+                bg_fg_area_ratio = bg_area / (gt.size - bg_area)
+                factor = 1 / (max_valid_tgt_idx + bg_fg_area_ratio)
+                mae = bg_fg_area_ratio * np.abs(_pred - _gt).sum() / bg_area * factor
 
             # foreground components
-            for tgt_idx in range(1, max_valid_tgt_idx + 1):
-                tgt_mask = get_kth_bit(tgt_weights, k=tgt_idx) > 0
+            for tgt_mask in tgt_masks:
                 tgt_area = np.count_nonzero(tgt_mask)
 
                 _pred = pred * tgt_mask

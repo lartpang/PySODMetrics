@@ -6,7 +6,6 @@ from pprint import pprint
 
 import cv2
 import numpy as np
-from skimage import data
 
 sys.path.append("..")
 import py_sod_metrics
@@ -20,7 +19,7 @@ def cal_auc(y: np.ndarray, x: np.ndarray):
     sorted_idx = np.argsort(x, axis=-1, kind="stable")
     y = np.take_along_axis(y, sorted_idx, axis=-1)
     x = np.take_along_axis(x, sorted_idx, axis=-1)
-    return np.trapz(y=y, x=x, axis=-1)
+    return py_sod_metrics.utils.trapezoid(y=y, x=x, axis=-1)
 
 
 def reduce_dynamic_results_for_max_avg(dynamic_results: list):  # Nx[T'x256] -> Nx[T'] -> N -> 1
@@ -160,6 +159,7 @@ class CheckMetricTestCase(unittest.TestCase):
         data_root = "./test_data"
         mask_root = os.path.join(data_root, "masks")
         pred_root = os.path.join(data_root, "preds")
+        img_root = os.path.join(data_root, "imgs")
         mask_name_list = sorted(os.listdir(mask_root))
 
         for i, mask_name in enumerate(mask_name_list):
@@ -169,9 +169,10 @@ class CheckMetricTestCase(unittest.TestCase):
             mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
             pred = cv2.imread(pred_path, cv2.IMREAD_GRAYSCALE)
 
-            # random select an image from skimage.data
-            img = data.astronaut()
-            img = cv2.resize(img, dsize=(mask.shape[1], mask.shape[0]), interpolation=cv2.INTER_LINEAR)
+            # `skimage.data.astronaut()` resized to the mask size, stored as files since the output of `cv2.resize` changes across OpenCV versions (since 4.14), which would change the results of CCM
+            img = cv2.imread(os.path.join(img_root, mask_name), cv2.IMREAD_COLOR)
+            assert img is not None and img.shape[:2] == mask.shape, (mask_name, None if img is None else img.shape)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
             FM.step(pred=pred, gt=mask)
             WFM.step(pred=pred, gt=mask)
@@ -285,6 +286,13 @@ class CheckMetricTestCase(unittest.TestCase):
             if any([k in cls.default_results for k in default_results[append_version].keys()]):
                 raise ValueError("Some keys will be overwritten by the SI variant results.")
             cls.default_results.update(default_results[append_version])
+        # Fix versions: results of existing metrics that were changed by a bug fix, overriding the old values.
+        for fix_version in [
+            "v1_7_0",  # MSIoU: exact edge pixel counting (float16 -> float64), consistent across platforms
+        ]:
+            if not all([k in cls.default_results for k in default_results[fix_version].keys()]):
+                raise ValueError(f"A fix version ({fix_version}) should only override existing keys.")
+            cls.default_results.update(default_results[fix_version])
 
     def test_sm(self):
         self.assertEqual(self.curr_results["Smeasure"], self.default_results["Smeasure"])

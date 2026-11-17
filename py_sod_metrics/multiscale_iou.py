@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import ndimage
 
-from .utils import TYPE, get_adaptive_threshold, validate_and_normalize_input
+from .utils import TYPE, get_adaptive_threshold, trapezoid, validate_and_normalize_input
 
 
 class MSIoU:
@@ -20,21 +20,25 @@ class MSIoU:
     ```
     """
 
-    def __init__(self, with_dynamic: bool, with_adaptive: bool, *, with_binary: bool = False, num_levels=10):
+    def __init__(self, with_dynamic: bool, with_adaptive: bool, *, with_binary: bool = False, num_levels: int = 10):
         """Initialize the MSIoU evaluator.
 
         Args:
             with_dynamic (bool, optional): Record dynamic results for max/avg/curve versions.
             with_adaptive (bool, optional): Record adaptive results for adp version.
             with_binary (bool, optional): Record binary results for binary version.
+            num_levels (int, optional): Number of scales in [1, 63], using the cell sizes [2^0, 2^1, ..., 2^(num_levels - 1)]. A single level returns the edge IoU at the original resolution. Defaults to 10 (1 to 512) as in the original implementation.
         """
+        # 63: 2^62 is the largest cell size that fits in int64.
+        if not (isinstance(num_levels, (int, np.integer)) and 1 <= num_levels <= 63):
+            raise ValueError(f"num_levels must be an integer in [1, 63], got {num_levels!r}.")
+
         self.dynamic_results = [] if with_dynamic else None
         self.adaptive_results = [] if with_adaptive else None
         self.binary_results = [] if with_binary else None
 
         # The values of this collection determines the resolutions based on which MIoU is computed.
-        # It is set as the original implementation
-        self.cell_sizes = np.power(2, np.linspace(0, 9, num=num_levels, dtype=int))
+        self.cell_sizes = np.power(2, np.arange(num_levels, dtype=np.int64))
 
     def get_edge(self, mask: np.ndarray):
         """Edge detection based on the `scipy.ndimage.sobel` function.
@@ -42,11 +46,13 @@ class MSIoU:
         :param mask: a binary mask of an object whose edges are of interest.
         :return: a binary mask of 1's as edges and 0's as background.
         """
+        # NOTE: Cast to float64 first. For a bool mask, `np.hypot` of the bool sobel outputs returns float16, in which the subsequent pixel counting (`.sum()`) loses precision beyond 2048 and becomes platform-dependent.
+        mask = np.asarray(mask, dtype=TYPE)
         sx = ndimage.sobel(mask, axis=0, mode="constant")
         sy = ndimage.sobel(mask, axis=1, mode="constant")
         sob = np.hypot(sx, sy)
         # sob[sob > 0] = 1
-        return (sob > 0).astype(sob.dtype)
+        return (sob > 0).astype(TYPE)
 
     def shrink_by_grid(self, image: np.ndarray, cell_size: int) -> np.ndarray:
         """Shrink the image by checking for any non-zero values within grid cells.
@@ -62,10 +68,15 @@ class MSIoU:
             raise ValueError("Cell size must be a positive integer")
 
         if cell_size > 1:
-            # Calculate padding sizes to make dimensions divisible by cell_size
             h, w = image.shape[:2]
-            pad_h = (cell_size - h % cell_size) % cell_size
-            pad_w = (cell_size - w % cell_size) % cell_size
+            # If the cell size reaches the image size along an axis, there is only one cell along that axis.
+            # Using the image size as the cell size there gives the same result without padding the image up to `cell_size`, which would explode the memory for large cell sizes (e.g., 2^15 for 16 levels).
+            cell_h = min(int(cell_size), h)
+            cell_w = min(int(cell_size), w)
+
+            # Calculate padding sizes to make dimensions divisible by the cell size
+            pad_h = (cell_h - h % cell_h) % cell_h
+            pad_w = (cell_w - w % cell_w) % cell_w
 
             # Apply padding if necessary
             if pad_h > 0 or pad_w > 0:
@@ -74,7 +85,7 @@ class MSIoU:
 
             # Reshape and check for any non-zero value within each cell
             h, w = image.shape[:2]
-            image = image.reshape(h // cell_size, cell_size, w // cell_size, cell_size)
+            image = image.reshape(h // cell_h, cell_h, w // cell_w, cell_w)
             # Use any() for efficiency, but maintain the exact original data type to avoid precision drift in subsequent sums
             return image.any(axis=(1, 3)).astype(image.dtype)
 
@@ -124,8 +135,12 @@ class MSIoU:
         pred_edge = self.get_edge(pred_bin)
         ratios = self.multi_scale_iou(pred_edge, gt_edge, gt_shrunk_cache=gt_shrunk_cache)  # 10
 
+        if len(ratios) == 1:
+            # Single-scale fallback: there is no curve to integrate, so return the edge IoU itself.
+            return ratios[0]
+
         # Calculate area under the curve using trapezoidal rule
-        return np.trapz(y=ratios, dx=1 / (len(self.cell_sizes) - 1))
+        return trapezoid(y=ratios, dx=1 / (len(self.cell_sizes) - 1))
 
     def step(self, pred: np.ndarray, gt: np.ndarray, normalize: bool = True):
         """Calculate the Multi-Scale IoU for a single prediction-ground truth pair.

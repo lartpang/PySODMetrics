@@ -332,7 +332,7 @@ class TargetwiseGrayscaleMetricRecorderV2:
         sorted_idx = np.argsort(x, axis=-1, kind="stable")
         x = np.take_along_axis(x, sorted_idx, axis=-1)
         y = np.take_along_axis(y, sorted_idx, axis=-1)
-        return np.trapz(y, x, axis=-1)
+        return py_sod_metrics.utils.trapezoid(y, x, axis=-1)
 
     def get_all_results(self, num_bits: int = 3, return_ndarray: bool = False) -> dict:
         sequential_results = {}

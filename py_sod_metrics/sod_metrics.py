@@ -6,7 +6,7 @@ from scipy.ndimage import convolve
 from scipy.ndimage import distance_transform_edt as bwdist
 from skimage import measure, morphology
 
-from .utils import EPS, TYPE, get_adaptive_threshold, validate_and_normalize_input
+from .utils import EPS, TYPE, approx_poly_dp, get_adaptive_threshold, validate_and_normalize_input
 
 
 class Fmeasure:
@@ -327,6 +327,9 @@ class Smeasure:
         """
         h, w = pred.shape
         N = h * w
+        if N == 0:
+            # An empty quadrant (e.g., the foreground centroid lies on the last row/column) has zero area weight in `region()`, so it contributes nothing. Return 0 instead of NaN to avoid `NaN * 0 = NaN`.
+            return 0
 
         x = np.mean(pred)
         y = np.mean(gt)
@@ -859,7 +862,8 @@ class HumanCorrectionEffortMeasure:
         """
         num_points = 0
         for boundary in boundaries:
-            approx_poly = cv2.approxPolyDP(boundary, epsilon, False)  # approximate boundary
+            # NOTE: not `cv2.approxPolyDP`, whose results change since OpenCV 4.13
+            approx_poly = approx_poly_dp(boundary, epsilon, closed=False)  # approximate boundary
             num_points += len(approx_poly)  # count vertices (control points)
         return num_points
 
