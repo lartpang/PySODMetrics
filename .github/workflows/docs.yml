@@ -8,52 +8,65 @@ on:
     paths:
       - 'deploy/**'
       - 'py_sod_metrics/**'
+      - 'pyproject.toml'
       - '.github/workflows/docs.yml'
-  workflow_dispatch:  # Allow manual trigger
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag to build (e.g. v1.7.0). Leave empty to build the selected ref.'
+        type: string
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
+
+concurrency:
+  group: docs-pages
+  queue: max
 
 jobs:
-  build-and-deploy:
+  build:
+    if: >-
+      github.event_name != 'release' ||
+      (startsWith(github.ref, 'refs/tags/v') && !github.event.release.prerelease)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for proper git operations
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.sha }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           cache: 'pip'
+          cache-dependency-path: pyproject.toml
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install sphinx sphinx-rtd-theme
-          pip install -e .
+        run: python -m pip install -e '.[docs]'
 
       - name: Build documentation
-        run: |
-          cd deploy
-          sphinx-build -b html . ./_build
+        run: python -m sphinx -b html -d "$RUNNER_TEMP/sphinx-doctrees" deploy deploy/_build
 
-      - name: Add .nojekyll file
-        run: |
-          touch deploy/_build/.nojekyll
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy/_build
-          publish_branch: gh-pages
-          force_orphan: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Deploy documentation from ${{ github.sha }}'
+          path: deploy/_build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

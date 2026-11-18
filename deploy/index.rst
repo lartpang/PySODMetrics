@@ -21,9 +21,14 @@ and medical image segmentation tasks.
 **Key Features:**
 
 * Based on numpy and scipy for fast computation
-* Verified against the original MATLAB implementations
+* Core SOD metrics compared with Fan's MATLAB toolbox
 * Simple and extensible code structure
 * Lightweight and easy to use
+
+The 1.7.0 regression results were checked on the maintainer's original Windows
+machine. :ref:`MSIoU <msiou>` uses updated baselines after the edge-counting fix.
+The other tested metrics matched the historical PySODMetrics baselines. See the `changelog
+<https://github.com/lartpang/PySODMetrics/blob/main/CHANGELOG.md>`_.
 
 .. note::
    Our exploration in this field continues with `PyIRSTDMetrics <https://github.com/lartpang/PyIRSTDMetrics>`_,
@@ -61,9 +66,12 @@ PySODMetrics supports a comprehensive set of evaluation metrics:
 * **Context-Measure** (:math:`C_\beta`, :math:`C^\omega_\beta`)
 * **Multi-Scale IoU** - Multi-scale Intersection over Union
 * **Human Correction Effort Measure**
-* And many more classification metrics (BER, Dice, Kappa, Precision, Recall, etc.)
+* **FmeasureV2 handlers** for IoU, Dice, BER, Kappa, precision, recall and other classification metrics
+* **Size-invariant metrics** for MAE and the FmeasureV2 handlers
 
-See :doc:`metrics` for detailed descriptions of all supported metrics.
+See :doc:`metrics` for all metric definitions. The illustrated examples cover
+:ref:`threshold modes <threshold-modes>`, :ref:`MSIoU <msiou>`, and
+:ref:`size-invariant metrics <size-invariant-metrics>`.
 
 Indices and tables
 ==================

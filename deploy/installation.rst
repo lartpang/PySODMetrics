@@ -4,7 +4,8 @@ Installation
 Requirements
 ------------
 
-PySODMetrics requires Python 3.6 or higher and the following dependencies:
+The package metadata lists Python 3.6 or higher. Installation requires versions
+of the following dependencies that support your Python version and platform.
 
 * numpy >= 1.18, < 2.3.5
 * scipy >= 1.5, < 2.0
@@ -56,22 +57,15 @@ If you want to modify the code or contribute to the project:
 Building Documentation
 ----------------------
 
-To build the documentation locally, you need to install the documentation dependencies:
+Install the package and its documentation dependencies from the repository root,
+then build the HTML documentation.
 
 .. code-block:: bash
 
-   pip install sphinx sphinx-rtd-theme
+   python -m pip install -e ".[docs]"
+   python -m sphinx -b html deploy deploy/_build
 
-Then build the documentation:
-
-.. code-block:: bash
-
-   cd docs
-   make html  # On Linux/Mac
-   # or
-   make.bat html  # On Windows
-
-The built documentation will be available in ``docs/_build/html/``.
+Open ``deploy/_build/index.html`` to preview the documentation.
 
 Verifying Installation
 ----------------------

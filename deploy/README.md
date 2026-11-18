@@ -4,46 +4,26 @@ This directory contains the source files for building the PySODMetrics documenta
 
 ## Quick Start
 
-Build the documentation:
+Install the project and build the documentation from the repository root.
 
 ```bash
-cd deploy
-sphinx-build -b html . ./_build
+python -m pip install -e ".[docs]"
+python -m sphinx -b html deploy deploy/_build
 ```
 
-The built documentation will be placed in the `_build/` directory in the project root.
+Open `deploy/_build/index.html` to preview the documentation. GitHub Pages uses
+the contents of `deploy/_build/`.
 
 ## Clean Build
 
-To clean the build directory and rebuild from scratch:
+To rebuild every page with a fresh Sphinx environment, run this from the repository root.
 
 ```bash
-cd deploy
-rm -rf ./_build
-sphinx-build -b html . ./_build
+python -m sphinx -E -a -b html deploy deploy/_build
 ```
 
 ## Directory Structure
 
 - `*.rst` - Documentation source files (reStructuredText)
 - `conf.py` - Sphinx configuration
-- `_static/` - Static files (CSS, images, etc.)
-
-## Output
-
-- Built HTML documentation is output to: `./deploy/_build/`
-- This allows the `deploy/_build/` folder to be used directly for GitHub Pages
-
-## Requirements
-
-Install documentation dependencies:
-
-```bash
-pip install sphinx sphinx-rtd-theme
-```
-
-Or use the project's optional dependencies:
-
-```bash
-pip install -e ".[docs]"
-```
+- `_static/` - Optional directory for custom static files (CSS, images, etc.)

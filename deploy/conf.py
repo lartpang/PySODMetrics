@@ -5,6 +5,7 @@
 
 import os
 import sys
+from importlib import metadata
 
 # -- Path setup --------------------------------------------------------------
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -17,7 +18,7 @@ sys.path.insert(0, os.path.abspath(".."))
 project = "PySODMetrics"
 copyright = "2025, lartpang"
 author = "lartpang"
-release = "1.7.0"
+release = metadata.version("pysodmetrics")
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -37,7 +38,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_rtd_theme"
-html_static_path = ["_static"]
+html_static_path = ["_static"] if os.path.isdir(os.path.join(os.path.dirname(__file__), "_static")) else []
 
 # -- Extension configuration -------------------------------------------------
 

@@ -1,7 +1,28 @@
 Usage Guide
 ===========
 
-This guide provides practical examples of how to use PySODMetrics for evaluating your image segmentation results.
+The examples below evaluate paired segmentation predictions and ground-truth masks.
+
+.. _metric-inputs:
+
+Metric Inputs
+-------------
+
+Pass nonempty 2D NumPy arrays of the same shape to ``step(pred, gt)``. By default,
+use grayscale ``uint8`` arrays in ``[0, 255]``. The library divides ``pred`` by
+255 and min-max scales each nonconstant prediction to ``[0, 1]``. It converts the
+ground truth to a boolean mask with ``gt > 128``.
+
+Use ``step(pred, gt, normalize=False)`` to keep existing prediction values. This
+mode requires ``float32`` or ``float64`` predictions in ``[0, 1]`` and a boolean
+ground-truth mask. Adaptive and fixed binary thresholds use those values directly.
+Dynamic curves still quantize predictions to 8 bits.
+See :ref:`the threshold diagram <threshold-modes>` for the binary masks and
+the order of the returned curves.
+
+``CamouflageContextMeasure`` also takes ``img=img`` with an aligned RGB image of
+shape ``(H, W, 3)``. Read color images from OpenCV as BGR and convert them to RGB
+before passing them in.
 
 Quick Start
 -----------
@@ -9,12 +30,12 @@ Quick Start
 Basic Example with Individual Metrics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here's a simple example using individual metrics:
+Provide ``pred_paths`` and ``gt_paths`` in matching sample order. This example uses
+the legacy ``Fmeasure`` class. For new code, use :ref:`fmeasurev2`.
 
 .. code-block:: python
 
    import cv2
-   import numpy as np
    from py_sod_metrics import MAE, Emeasure, Smeasure, Fmeasure, WeightedFmeasure
 
    # Initialize metrics
@@ -57,7 +78,9 @@ Here's a simple example using individual metrics:
 Using FmeasureV2 Framework (Recommended)
 -----------------------------------------
 
-The ``FmeasureV2`` framework provides a unified interface for computing multiple metrics efficiently.
+``FmeasureV2`` shares threshold statistics across the requested handlers. It returns
+the enabled modes under each handler name. See :ref:`fmeasurev2` for the threshold
+order and the difference between sample-based and pooled binary scores.
 
 Basic FmeasureV2 Usage
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -100,7 +123,7 @@ Basic FmeasureV2 Usage
 
 **Available Handlers:**
 
-- ``FmeasureHandler`` - F-measure with configurable β
+- ``FmeasureHandler`` - F-measure with configurable :math:`\beta^2`
 - ``PrecisionHandler`` - Precision (Positive Predictive Value)
 - ``RecallHandler`` - Recall (Sensitivity, TPR)
 - ``IOUHandler`` - Intersection over Union
@@ -275,8 +298,11 @@ Specialized Use Cases
 Context-Measure for Camouflaged Object Detection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Provide ``cod_dataset`` as triples of prediction, mask, and aligned RGB image paths.
+
 .. code-block:: python
 
+   import cv2
    from py_sod_metrics import ContextMeasure, CamouflageContextMeasure
 
    # Standard Context Measure
@@ -288,10 +314,10 @@ Context-Measure for Camouflaged Object Detection
    for pred_path, gt_path, img_path in cod_dataset:
        pred = cv2.imread(pred_path, cv2.IMREAD_GRAYSCALE)
        gt = cv2.imread(gt_path, cv2.IMREAD_GRAYSCALE)
-       img = cv2.imread(img_path)  # RGB image
+       img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
 
        cm.step(pred, gt)
-       ccm.step(pred, gt, img)  # Note: CCM requires the original image
+       ccm.step(pred, gt, img=img)
 
    cm_score = cm.get_results()['cm']
    ccm_score = ccm.get_results()['ccm']
@@ -302,9 +328,15 @@ Context-Measure for Camouflaged Object Detection
 Size-Invariant Metrics
 ~~~~~~~~~~~~~~~~~~~~~~
 
+With the default ``sample_based=True``, each dynamic result is a list of per-image
+target curves. The example computes the sample-based maximum in the order used by
+the repository's example recorder. See :ref:`size-invariant-metrics` for the other
+aggregation modes.
+
 .. code-block:: python
 
-   from py_sod_metrics import SizeInvarianceFmeasureV2, SizeInvarianceMAE, FmeasureHandler, PrecisionHandler, RecallHandler
+   import numpy as np
+   from py_sod_metrics import FmeasureHandler, SizeInvarianceFmeasureV2, SizeInvarianceMAE
 
    # Size-invariant MAE
    si_mae = SizeInvarianceMAE()
@@ -312,9 +344,7 @@ Size-Invariant Metrics
    # Size-invariant FmeasureV2
    si_fmv2 = SizeInvarianceFmeasureV2(
        metric_handlers={
-           "si_fm": FmeasureHandler(beta=0.3, with_adaptive=True, with_dynamic=True),
-           "si_pre": PrecisionHandler(with_adaptive=False, with_dynamic=True, sample_based=True),
-           "si_rec": RecallHandler(with_adaptive=False, with_dynamic=True, sample_based=True),
+           "fm": FmeasureHandler(beta=0.3, with_adaptive=True, with_dynamic=True),
        }
    )
 
@@ -325,18 +355,26 @@ Size-Invariant Metrics
 
    # Get results
    mae_score = si_mae.get_results()['si_mae']
-   fmv2_results = si_fmv2.get_results()
+   fm_scores = si_fmv2.get_results()["fm"]
+   sample_max = np.mean([curves.max(axis=1).mean() for curves in fm_scores["dynamic"]])
 
    print(f"SI-MAE: {mae_score:.4f}")
+   print(f"SI F-measure (sample-based max): {sample_max:.4f}")
 
 Multi-Scale IoU
 ~~~~~~~~~~~~~~~
+
+Choose one or more threshold modes. The result contains a key for each enabled mode.
+``dynamic`` is the dataset-averaged 257-point curve over thresholds 0 to 256 in
+ascending order. The evaluator compares the quantized 8-bit prediction with each
+threshold using ``>=``. ``adaptive`` and ``binary`` are dataset-averaged scalars.
+On the normalized prediction, adaptive mode uses ``pred >= min(2 * pred.mean(), 1)``
+and binary mode uses ``pred > 0.5``.
 
 .. code-block:: python
 
    from py_sod_metrics import MSIoU
 
-   # Initialize with different strategies
    msiou = MSIoU(with_dynamic=True, with_adaptive=True, with_binary=True)
 
    for pred, gt in dataset:
@@ -349,24 +387,23 @@ Multi-Scale IoU
    print(f"MS-IoU (mean): {results['dynamic'].mean():.4f}")
    print(f"MS-IoU (binary): {results['binary']:.4f}")
 
-Complete Evaluation Example
+Directory Evaluation Example
 ----------------------------
 
-Here's a complete, production-ready example:
+The following evaluator matches predictions and masks by filename. Each directory
+contains one file per sample, with the same filename in both directories.
 
 .. code-block:: python
 
-   import os
+   from pathlib import Path
+
    import cv2
-   import numpy as np
    from py_sod_metrics import (
        MAE, Emeasure, Smeasure, WeightedFmeasure,
        FmeasureV2, FmeasureHandler, PrecisionHandler, RecallHandler, IOUHandler
    )
 
    class SODEvaluator:
-       # Complete SOD evaluation class
-
        def __init__(self):
            self.mae = MAE()
            self.em = Emeasure()
@@ -413,17 +450,20 @@ Here's a complete, production-ready example:
            return results
 
    def evaluate_predictions(pred_dir, gt_dir):
-       # Evaluate all predictions in a directory
        evaluator = SODEvaluator()
+       pred_dir = Path(pred_dir)
+       gt_dir = Path(gt_dir)
 
-       pred_files = sorted(os.listdir(pred_dir))
-       gt_files = sorted(os.listdir(gt_dir))
+       pred_names = {path.name for path in pred_dir.iterdir() if path.is_file()}
+       gt_names = {path.name for path in gt_dir.iterdir() if path.is_file()}
+       if not gt_names or pred_names != gt_names:
+           raise ValueError("Expected matching prediction and mask filenames and at least one pair.")
 
-       assert len(pred_files) == len(gt_files), "Mismatch in number of files"
-
-       for pred_file, gt_file in zip(pred_files, gt_files):
-           pred = cv2.imread(os.path.join(pred_dir, pred_file), cv2.IMREAD_GRAYSCALE)
-           gt = cv2.imread(os.path.join(gt_dir, gt_file), cv2.IMREAD_GRAYSCALE)
+       for name in sorted(gt_names):
+           pred = cv2.imread(str(pred_dir / name), cv2.IMREAD_GRAYSCALE)
+           gt = cv2.imread(str(gt_dir / name), cv2.IMREAD_GRAYSCALE)
+           if pred is None or gt is None:
+               raise ValueError(f"Could not read prediction or mask for {name}")
 
            if pred.shape != gt.shape:
                pred = cv2.resize(pred, dsize=gt.shape[::-1], interpolation=cv2.INTER_LINEAR)
@@ -451,10 +491,8 @@ Best Practices
 
 1. **Data Format**
 
-   - Predictions and ground truth should be ``uint8`` numpy arrays
-   - Values should be in range [0, 255]
-   - Ground truth masks should typically be binary (0 or 255)
-   - Ensure prediction and ground truth have the same spatial dimensions
+   - Use the formats in :ref:`metric-inputs`.
+   - Resize predictions to the ground-truth dimensions before calling ``step()``.
 
 2. **Memory Efficiency**
 
@@ -464,22 +502,21 @@ Best Practices
 
 3. **Result Interpretation**
 
-   - ``adaptive``: Threshold-based metric using 2× mean of predictions
-   - ``dynamic``: Curve across all thresholds (256 points)
-   - ``binary``: Metric computed on binarized predictions
-   - ``curve``: Full precision-recall curve or threshold-based curve
+   - Legacy F-measure and E-measure return ``adp`` and ``curve`` under ``fm`` and
+     ``em``, respectively. Legacy F-measure returns precision and recall under ``pr``.
+   - See :doc:`metrics` for threshold directions and aggregation. ``MSIoU`` uses
+     257 thresholds, while the F-measure and E-measure curves use 256.
 
 4. **Choosing Metrics**
 
    - **For SOD**: MAE, S-measure, E-measure, F-measure, Weighted F-measure
    - **For COD**: Add Context-Measure and Camouflage Context-Measure
-   - **For multi-scale objects**: Use size-invariant (SI) variants
+   - **For images containing objects of different sizes**: Use size-invariant (SI) variants
    - **For fine structures**: Use Multi-Scale IoU
    - **For medical imaging**: Consider Dice coefficient and IoU
 
 5. **Performance Tips**
 
-   - Resize predictions to match ground truth size before calling ``step()``
    - Use FmeasureV2 to compute multiple related metrics efficiently
    - Specify only the metrics you need to save computation time
 
@@ -488,5 +525,5 @@ Reference
 
 For more examples, see the `examples folder <https://github.com/lartpang/PySODMetrics/tree/main/examples>`_ in the GitHub repository:
 
-- ``metric_recorder.py`` - Production-ready metric recorder implementations
-- ``test_metrics.py`` - Comprehensive test cases showing all features
+- ``metric_recorder.py`` - Metric recorder examples
+- ``test_metrics.py`` - Regression tests against the bundled reference values
