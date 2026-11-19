@@ -1,9 +1,28 @@
 import numpy as np
+from scipy import ndimage
 from skimage import measure
 
 from .fmeasurev2 import FmeasureV2
 from .sod_metrics import MAE
 from .utils import TYPE, validate_and_normalize_input
+
+
+def _label_targets(mask: np.ndarray, area_threshold: float = 50) -> tuple:
+    labeled_tgts = measure.label(mask, connectivity=1, background=0, return_num=False)
+    areas = np.bincount(labeled_tgts.ravel())[1:]  # 0 is background
+    target_labels = np.flatnonzero(areas >= area_threshold)
+    if target_labels.size == 0 and areas.size > 0:
+        # Keep all targets tied for the largest area.
+        target_labels = np.flatnonzero(areas == areas.max())
+    return labeled_tgts, target_labels + 1
+
+
+def _get_target_boxes(mask: np.ndarray) -> list:
+    labeled_tgts, target_labels = _label_targets(mask)
+    if target_labels.size == 0:
+        return []
+    boxes = ndimage.find_objects(labeled_tgts)
+    return [boxes[label - 1] for label in target_labels]
 
 
 def parse_connected_components(mask: np.ndarray, area_threshold: float = 50) -> tuple:
@@ -19,33 +38,10 @@ def parse_connected_components(mask: np.ndarray, area_threshold: float = 50) -> 
     Returns:
         tuple: max_valid_tgt_idx, valid_labeled_mask
     """
-    labeled_tgts = measure.label(mask, connectivity=1, background=0, return_num=False)
-    tgt_props = measure.regionprops(labeled_tgts)
-
-    # find the valid targets based on the target size
-    tgts_with_max_size = []
-    max_valid_tgt_idx = 0  # 0 is background
-    valid_labeled_mask = np.zeros_like(mask, dtype=int)
-    for tgt_prop in tgt_props:
-        if not tgts_with_max_size or tgts_with_max_size[0].area == tgt_prop.area:
-            # if no targets or area matches, append the current target
-            tgts_with_max_size.append(tgt_prop)
-        elif tgts_with_max_size[0].area < tgt_prop.area:
-            # if current target has larger area, replace the list
-            tgts_with_max_size = [tgt_prop]
-
-        if tgt_prop.area >= area_threshold:  # valid indices start from 1
-            max_valid_tgt_idx += 1
-            valid_labeled_mask[labeled_tgts == tgt_prop.label] = max_valid_tgt_idx
-
-    if max_valid_tgt_idx == 0:  # no targets with area >= area_threshold
-        # here is different from the original implementation (https://github.com/Ferry-Li/SI_Metric/blob/6b87f78512f7c9c2600e2c2f563cc3763581e24f/generate_weight.py#L43-L52)
-        # the original implementation directly uses the first target in tgt_props and assigns the value 1 to the target's pixels
-        # while this implementation assigns a unique index to each target in tgts_with_max_size (targets with the same and largest area)
-        for tgt_prop in tgts_with_max_size:
-            max_valid_tgt_idx += 1
-            valid_labeled_mask[labeled_tgts == tgt_prop.label] = max_valid_tgt_idx
-    return max_valid_tgt_idx, valid_labeled_mask
+    labeled_tgts, target_labels = _label_targets(mask, area_threshold)
+    label_map = np.zeros(labeled_tgts.max(initial=0) + 1, dtype=int)
+    label_map[target_labels] = np.arange(1, target_labels.size + 1)
+    return target_labels.size, label_map[labeled_tgts]
 
 
 def get_bboxwise_tgt_masks(max_valid_tgt_idx: int, valid_labeled_mask: np.ndarray) -> list:
@@ -144,15 +140,17 @@ class SizeInvarianceFmeasureV2(FmeasureV2):
 
         pred, gt = validate_and_normalize_input(pred, gt, normalize=normalize)
 
-        max_valid_tgt_idx, valid_labeled_mask = parse_connected_components(mask=gt)
+        target_boxes = _get_target_boxes(gt)
 
-        if max_valid_tgt_idx == 0:  # no target or no background
-            self._update_metrics(pred=pred, gt=gt)
+        if target_boxes:
+            for target_box in target_boxes:
+                target_pred = np.zeros_like(pred, order="C")
+                target_gt = np.zeros_like(gt, order="C")
+                target_pred[target_box] = pred[target_box]
+                target_gt[target_box] = gt[target_box]
+                self._update_metrics(pred=target_pred, gt=target_gt)
         else:
-            for tgt_mask in get_bboxwise_tgt_masks(max_valid_tgt_idx, valid_labeled_mask):
-                _pred = pred * tgt_mask
-                _gt = gt & tgt_mask
-                self._update_metrics(pred=_pred, gt=_gt)
+            self._update_metrics(pred=pred, gt=gt)
 
         # average over all targets in each sample
         for handler_name, handler in self._metric_handlers.items():
@@ -220,33 +218,37 @@ class SizeInvarianceMAE(MAE):
             normalize (bool, optional): Whether to normalize the input data. Defaults to True.
         """
         pred, gt = validate_and_normalize_input(pred, gt, normalize=normalize)
-        max_valid_tgt_idx, valid_labeled_mask = parse_connected_components(mask=gt)
+        target_boxes = _get_target_boxes(gt)
 
-        if max_valid_tgt_idx == 0:  # no targets or no background
+        if not target_boxes:
             mae = np.abs(pred - gt).mean()
-        else:  # there are multiple targets
-            tgt_masks = get_bboxwise_tgt_masks(max_valid_tgt_idx, valid_labeled_mask)
-
-            # background component
-            bg_mask = ~np.logical_or.reduce(tgt_masks)  # outside all target bboxes
+        else:
+            bg_mask = np.ones(gt.shape, dtype=bool)
+            for target_box in target_boxes:
+                bg_mask[target_box] = False
             bg_area = np.count_nonzero(bg_mask)
-            if bg_area == 0:  # the target bboxes cover the whole image, so the background term vanishes
-                factor = 1 / max_valid_tgt_idx
-                mae = 0
-            else:
-                _pred = pred * bg_mask
-                _gt = gt & bg_mask
+
+            # Sum zero-padded errors in image order to preserve floating-point results.
+            errors = np.zeros_like(pred, order="C")
+            mae = 0
+            if bg_area:
                 bg_fg_area_ratio = bg_area / (gt.size - bg_area)
-                factor = 1 / (max_valid_tgt_idx + bg_fg_area_ratio)
-                mae = bg_fg_area_ratio * np.abs(_pred - _gt).sum() / bg_area * factor
+                factor = 1 / (len(target_boxes) + bg_fg_area_ratio)
+                np.subtract(pred, gt, out=errors, where=bg_mask)
+                np.abs(errors, out=errors)
+                mae = bg_fg_area_ratio * errors.sum() / bg_area * factor
+                errors.fill(0)
+            else:
+                factor = 1 / len(target_boxes)
 
-            # foreground components
-            for tgt_mask in tgt_masks:
-                tgt_area = np.count_nonzero(tgt_mask)
-
-                _pred = pred * tgt_mask
-                _gt = gt & tgt_mask
-                mae += np.abs(_pred - _gt).sum() / tgt_area * factor
+            # Match the scalar promotion of count_nonzero without allocating a target mask.
+            area_type = type(bg_area)
+            for target_box in target_boxes:
+                target_errors = errors[target_box]
+                np.subtract(pred[target_box], gt[target_box], out=target_errors)
+                np.abs(target_errors, out=target_errors)
+                mae += errors.sum() / area_type(target_errors.size) * factor
+                target_errors.fill(0)
         self.maes.append(mae)
 
     def get_results(self) -> dict:

@@ -75,8 +75,8 @@ Multi-Scale IoU Module
 
    .. py:method:: get_results()
 
-      Return the mean over samples for each enabled mode. ``dynamic`` is a 257-point
-      NumPy array in ascending threshold order from 0 to 256. ``adaptive`` and
+      Return the mean over samples for each enabled mode. ``dynamic`` is a 256-point
+      NumPy array in ascending threshold order from 0 to 255. ``adaptive`` and
       ``binary`` are scalars.
 
    .. py:method:: get_edge(mask)

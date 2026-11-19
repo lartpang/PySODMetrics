@@ -289,6 +289,7 @@ class CheckMetricTestCase(unittest.TestCase):
         # Fix versions: results of existing metrics that were changed by a bug fix, overriding the old values.
         for fix_version in [
             "v1_7_0",  # MSIoU: exact edge pixel counting (float16 -> float64), consistent across platforms
+            "v1_7_1",  # MSIoU: average over thresholds 0 through 255
         ]:
             if not all([k in cls.default_results for k in default_results[fix_version].keys()]):
                 raise ValueError(f"A fix version ({fix_version}) should only override existing keys.")
@@ -308,12 +309,32 @@ class CheckMetricTestCase(unittest.TestCase):
 
         self.assertEqual(self.curr_results["si_mae"], self.default_results["si_mae"])
 
+    def test_si_mae_float32(self):
+        pred = np.full((2, 3), 0.1, dtype=np.float32)
+        gt = np.ones(pred.shape, dtype=bool)
+        expected = np.abs(pred - gt).sum() / np.count_nonzero(gt)
+
+        metric = py_sod_metrics.SizeInvarianceMAE()
+        metric.step(pred, gt, normalize=False)
+        self.assertEqual(metric.get_results()["si_mae"], expected)
+
     def test_msiou(self):
         # self.assertEqual(self.curr_results["MSIOU"], self.default_results["MSIOU"])
         self.assertEqual(self.curr_results["adpmsiou"], self.default_results["adpmsiou"])
         self.assertEqual(self.curr_results["meanmsiou"], self.default_results["meanmsiou"])
         self.assertEqual(self.curr_results["maxmsiou"], self.default_results["maxmsiou"])
         self.assertEqual(self.curr_results["sample_bimsiou"], self.default_results["sample_bimsiou"])
+
+    def test_msiou_dynamic_thresholds(self):
+        pred = np.array([[0, 0, 1, 255], [0, 32, 32, 255], [64, 128, 254, 0], [128, 128, 255, 1]], dtype=np.uint8)
+        gt = pred >= 128
+        metric = py_sod_metrics.MSIoU(with_dynamic=True, with_adaptive=False, num_levels=3)
+
+        metric.step(pred.astype(np.float64) / 255, gt, normalize=False)
+
+        gt_edge = metric.get_edge(gt)
+        expected = [metric.binarizing(pred >= threshold, gt_edge) for threshold in range(256)]
+        np.testing.assert_array_equal(metric.get_results()["dynamic"], expected)
 
     def test_fm(self):
         self.assertEqual(self.curr_results["adpFm"], self.default_results["adpFm"])

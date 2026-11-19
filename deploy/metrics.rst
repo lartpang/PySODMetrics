@@ -28,17 +28,16 @@ Dynamic curves first quantize the prediction to 8 bits, then apply integer thres
    Q(x) &= \left\lfloor 255P(x) \right\rfloor, \\
    B_t(x) &= \mathbf{1}\!\left[Q(x) \ge t\right].
 
-E-measure, legacy F-measure, and both FmeasureV2 evaluators return 256 points in
-descending threshold order from 255 to 0. :ref:`msiou` returns 257 points in
-ascending order from 0 to 256.
+These evaluators use the same 256 thresholds from 0 through 255. E-measure,
+legacy F-measure, and both FmeasureV2 evaluators return scores in descending
+threshold order. :ref:`msiou` returns scores in ascending threshold order.
 
 .. figure:: figures/threshold-sweep.png
    :width: 100%
-   :alt: Five quantized pixel values compared with thresholds 64, 128, 192, and 256.
+   :alt: Five quantized pixel values compared with thresholds 0, 128, 192, and 255.
 
-   A value equal to the threshold is foreground. At threshold 128, the last three
-   pixels are foreground. MSIoU includes the endpoint at 256, where every pixel
-   is background.
+   A value equal to the threshold is foreground. At threshold 0, all five
+   pixels are foreground. At threshold 255, only the final pixel is foreground.
 
 Basic Metrics
 -------------
@@ -306,6 +305,10 @@ cell along that axis.
    pixels. The bundled regression samples have updated adaptive, mean, max, and
    binary scores. Custom grid configurations use consecutive powers of two from 1 pixel.
 
+.. versionchanged:: 1.7.1
+   The dynamic curve uses 256 thresholds from 0 through 255 in ascending order.
+   To compare mean MSIoU with an older 257-point curve, average its first 256 scores.
+
 **Reference:**
 
 Ahmadzadeh et al., "Multiscale IOU: A Metric for Evaluation of Salient Object Detection with Fine Structures", ICIP 2021
@@ -363,6 +366,10 @@ all components tied for largest. A mask with no foreground is scored as one imag
 .. versionchanged:: 1.7.0
    The size-invariant evaluators support all-foreground masks and more than 63
    targets. SI-MAE averages the target terms when their boxes cover the full image.
+
+.. versionchanged:: 1.7.1
+   Target boxes are processed individually to reduce peak memory on images with
+   many targets.
 
 Size-Invariant FmeasureV2
 ~~~~~~~~~~~~~~~~~~~~~~~~~

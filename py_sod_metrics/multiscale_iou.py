@@ -167,9 +167,9 @@ class MSIoU:
 
             results = []
             _pred = (pred * 255).astype(np.uint8)
-            unique_pred_val = np.unique(_pred) + 1  # only consider thresholds that change the binary mask
-            for threshold in np.linspace(0, 256, 257):
-                if threshold in [0, 256] or threshold in unique_pred_val:
+            changed_thresholds = set(np.unique(_pred).astype(int) + 1)
+            for threshold in range(256):
+                if threshold == 0 or threshold in changed_thresholds:
                     results.append(self.binarizing(_pred >= threshold, gt_edge, gt_shrunk_cache))
                 else:
                     results.append(results[-1])

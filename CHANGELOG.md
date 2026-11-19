@@ -26,3 +26,8 @@
 - [FIX] `SizeInvarianceMAE` / `SizeInvarianceFmeasureV2`: Support ground truths that are entirely foreground, target bounding boxes covering the whole image, and more than 63 targets. The bitwise helpers `encode_bboxwise_tgts_bitwise` and `get_kth_bit` are replaced by `get_bboxwise_tgt_masks`.
 - [UPDATE] `MSIoU`: `num_levels` is no longer limited to 10. The k-th level uses the grid cell size 2^k, i.e., the cell sizes are [2^0, ..., 2^(num_levels - 1)]. The default `num_levels=10` still gives 1 to 512 as in the [original implementation](https://bitbucket.org/gsudmlab/multiscale_iou) (note that values in [2, 9] previously sampled cell sizes evenly from 1 to 512). `num_levels=1` falls back to the single-scale edge IoU. Cell sizes larger than the image no longer pad the image up to the cell size.
 - [FIX] `MSIoU`: Validate `num_levels` (an integer in [1, 63]) and replace the deprecated `np.trapz` with `np.trapezoid` (falling back to `np.trapz` on NumPy < 2.0).
+
+## [1.7.1]
+
+- [FIX] The `MSIoU` dynamic curve uses the same 256 thresholds as E-measure and F-measure. MSIoU returns scores in ascending order from `>= 0` through `>= 255`. To compare mean MSIoU with an older 257-point curve, average its first 256 scores.
+- [PERF] `SizeInvarianceMAE` and `SizeInvarianceFmeasureV2` process targets one bounding box at a time, reducing peak memory on images with many targets.

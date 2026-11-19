@@ -365,7 +365,7 @@ Multi-Scale IoU
 ~~~~~~~~~~~~~~~
 
 Choose one or more threshold modes. The result contains a key for each enabled mode.
-``dynamic`` is the dataset-averaged 257-point curve over thresholds 0 to 256 in
+``dynamic`` is the dataset-averaged 256-point curve over thresholds 0 to 255 in
 ascending order. The evaluator compares the quantized 8-bit prediction with each
 threshold using ``>=``. ``adaptive`` and ``binary`` are dataset-averaged scalars.
 On the normalized prediction, adaptive mode uses ``pred >= min(2 * pred.mean(), 1)``
@@ -504,8 +504,8 @@ Best Practices
 
    - Legacy F-measure and E-measure return ``adp`` and ``curve`` under ``fm`` and
      ``em``, respectively. Legacy F-measure returns precision and recall under ``pr``.
-   - See :doc:`metrics` for threshold directions and aggregation. ``MSIoU`` uses
-     257 thresholds, while the F-measure and E-measure curves use 256.
+   - See :ref:`threshold-modes` for the order of the 256 thresholds and :doc:`metrics`
+     for the metric-specific aggregation rules.
 
 4. **Choosing Metrics**
 
